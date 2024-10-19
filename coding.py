@@ -158,7 +158,7 @@ def encrypt(message, key):
 
     key_schedule = generate_keys(key)
 
-    print('Шифрованная информация (16ричная система): ', bin_to_hex(message, 64))
+    print('Шифрованная информация (16-ричная система): ', bin_to_hex(message, 64))
     perm = IP(message)
     print('После инициальной перестановки: ', bin_to_hex(perm, 64))
     left_half, right_half = perm[0:32], perm[32:64]
@@ -201,9 +201,48 @@ def decrypt(message, key):
     cyphertext = IP_Inverse(left_half + right_half)
     return cyphertext
 
+####################################################################
+# Функции инициального расширения ключа
+####################################################################
+
+def add_parity_bits(binary_key):
+    if len(binary_key) != 56:
+        raise ValueError("Input key must be 56 bits long.")
+    
+    # Позиции проверочных битов
+    parity_positions = [8, 16, 24, 32, 40, 48, 56, 64]
+    final_key = ""
+    bit_index = 0
+    ####################################################################
+    #Реализуем функцию добавления бита. Если нечётное - добавляем единицу делая количество единиц чётным
+    #Если оно уже четное, то просто добавляем ноль. Таким образом мы расширяем ключ с 56 изначальных битов до 64
+    ####################################################################
+    for i in range(1, 65):
+        if i in parity_positions:
+            byte = final_key[-7:]
+            ones_count = byte.count('1')
+            if ones_count % 2 == 0:
+                final_key += '1'
+            else:
+                final_key += '0'
+        else:
+            final_key += binary_key[bit_index]
+            bit_index += 1
+    
+    return final_key
+
+
+
+
 
 test1 = '1011101011101010111011111011100011101011111000101011101011101011'   
-test2 = '908F6CA04B08D401'
+test2 = '908F6CA04B08D4'
+
+temp = hex_to_binary(test2, len(test2))
+print(temp, len(temp))
+test2 = add_parity_bits(temp)
+print(test2, len(test2))
+
 
 
 
@@ -221,7 +260,7 @@ def binary_to_text(binary_data):
 ####################################################################
 # Тестовый полигон
 ####################################################################
-test_text = "LALALALA"
+test_text = "LALALALALALALALA"
 binary_output = text_to_binary(test_text)
 print(binary_output)
 print(binary_to_text(binary_output))
