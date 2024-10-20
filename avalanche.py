@@ -1,5 +1,6 @@
-import coding
 import pandas as pd
+import numpy as np
+import coding
 
 # Функция для изменения одного бита в бинарной строке
 def flip_bit(binary_string, bit_position):
@@ -78,16 +79,8 @@ def analyze_avalanche_effect_message(text, key, bit_position):
     # Создаем таблицу с результатами
     comparison_df = pd.DataFrame(comparison_table)
 
-    return comparison_df
+    return comparison_df, a_ij_matrix
 
-# Пример использования
-text = "EXAMPLEEEXAMPLEE"  # Исходный текст (16 символов = 128 бит, кратно 64)
-key = "KEY12345"         # Исходный ключ
-bit_position = 65        # Бит, который изменим (например, 65-й бит — это 2-й блок, 1-й бит блока)
 
-# Сравниваем шифрованные сообщения
-comparison_table = compare_encrypted_messages(text, key, bit_position)
 
-# Выводим таблицу
-print("Сравнение отличий битов на каждом раунде:")
-print(comparison_table)
+
