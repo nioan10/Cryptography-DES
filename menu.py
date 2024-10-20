@@ -9,6 +9,7 @@ from tkinter import ttk
 import os
 import tkinter.messagebox as messagebox
 import coding
+import time
 
 
 ##########################################################################################################
@@ -168,6 +169,7 @@ def show_encrypt_decrypt():
             messagebox.showerror("Ошибка", f"Ошибка при расширении ключа: {str(e)}")
             return
 
+        start_time = time.time()
         # Шифруем данные с помощью функции из файла coding.py
         try:
             encrypted_data = coding.encrypt(text_binary, expanded_key)  # Используем расширенный ключ
@@ -176,8 +178,12 @@ def show_encrypt_decrypt():
             messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
             return
 
+        end_time = time.time()  # Конец отсчета времени
+        encryption_time = end_time - start_time  # Время выполнения шифрования
+
         # Отображаем результат шифрования
         ttk.Label(root, text=f"Зашифрованный текст: {encrypted_data}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Время шифрования: {encryption_time:.6f} секунд", style="Small.TLabel").pack(pady=5)
         # Записываем зашифрованный текст в файл
         save_encrypted_data(encrypted_data)
         # Записываем расширенный ключ в файл
@@ -410,39 +416,155 @@ def show_current_data():
 def set_data():
     clear_screen()
     
-    # Функция для задания данных
-    # Выпадающий список для выбора формата текста
-    ttk.Label(root, text="Выберите формат блока текста:", style="TLabel", anchor="center").pack(pady=5)
-    text_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
-    text_format.pack(pady=5)
-    text_format.current(2)  # По умолчанию "Обычный"
-
-    # Поле для ввода текста
-    ttk.Label(root, text="Введите блок текста:", style="TLabel", anchor="center").pack(pady=5)
-    text_entry = ttk.Entry(root, width=100)
-    text_entry.pack(pady=5)
-
-    # Выпадающий список для выбора формата ключа
-    ttk.Label(root, text="Выберите формат ключа:", style="TLabel", anchor="center").pack(pady=5)
-    key_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
-    key_format.pack(pady=5)
-    key_format.current(1)  # По умолчанию "Шестнадцатиричный"
-
-    # Поле для ввода ключа
-    ttk.Label(root, text="Введите ключ:", style="TLabel", anchor="center").pack(pady=5)
-    key_entry = ttk.Entry(root, width=100)
-    key_entry.pack(pady=5)
-
-    # Кнопка для сохранения введенных данных с проверкой
-    ttk.Button(root, text="Сохранить данные", style="TButton", command=lambda: save_data(text_entry, text_format, key_entry, key_format)).pack(pady=10)
-
-    # Кнопка для возврата к рабочему меню
-    ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+    # Всплывающее окно для выбора типа данных
+    window = tk.Toplevel(root)
+    window.title("Выберите тип данных")
     
-    # Пояснительный текст внизу с выравниванием по центру
-    note = ("Текст должен содержать ровно 64 бита в бинарном формате, 8 символов текста, или 16 символов в шестнадцатиричном формате.\n"
-            "Ключ: строго 56 бит в бинарном, 7 символов в текстовом или 14 в шестнадцатиричном формате.")
-    ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
+    ttk.Label(window, text="Выберите тип данных", style="TLabel").pack(pady=10)
+    
+    # Функция для обработки обычных данных
+    def handle_regular_data():
+        window.destroy()  # Закрываем окно выбора
+        
+        # Выпадающий список для выбора формата текста
+        ttk.Label(root, text="Выберите формат блока текста:", style="TLabel", anchor="center").pack(pady=5)
+        text_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
+        text_format.pack(pady=5)
+        text_format.current(2)  # По умолчанию "Обычный"
+
+        # Поле для ввода текста
+        ttk.Label(root, text="Введите блок текста:", style="TLabel", anchor="center").pack(pady=5)
+        text_entry = ttk.Entry(root, width=100)
+        text_entry.pack(pady=5)
+
+        # Выпадающий список для выбора формата ключа
+        ttk.Label(root, text="Выберите формат ключа:", style="TLabel", anchor="center").pack(pady=5)
+        key_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
+        key_format.pack(pady=5)
+        key_format.current(1)  # По умолчанию "Шестнадцатиричный"
+
+        # Поле для ввода ключа
+        ttk.Label(root, text="Введите ключ:", style="TLabel", anchor="center").pack(pady=5)
+        key_entry = ttk.Entry(root, width=100)
+        key_entry.pack(pady=5)
+
+        # Кнопка для сохранения данных
+        ttk.Button(root, text="Сохранить данные", style="TButton", command=lambda: save_data(text_entry, text_format, key_entry, key_format)).pack(pady=10)
+
+        # Кнопка для возврата к рабочему меню
+        ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+    # Функция для обработки шифрованных данных
+    def handle_encrypted_data():
+        window.destroy()
+
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        encrypted_data_file = os.path.join(current_directory, "project_files", "encrypted_text.txt")
+        expanded_key_file = os.path.join(current_directory, "project_files", "expanded_key.txt")
+
+        if not os.path.exists(encrypted_data_file) or not os.path.exists(expanded_key_file):
+            messagebox.showerror("Ошибка", "Файлы с зашифрованной информацией или ключом не найдены.")
+            return
+
+        # Чтение шифрованной информации и расширенного ключа
+        with open(encrypted_data_file, 'r') as file:
+            encrypted_data = file.readlines()[1].strip().split(": ")[1]
+
+        with open(expanded_key_file, 'r') as file:
+            expanded_key = file.readlines()[1].strip().split(": ")[1]
+
+        # Преобразуем зашифрованные данные во все форматы
+        encrypted_text = binary_to_text(encrypted_data)
+        encrypted_hex = binary_to_hex(encrypted_data)
+        
+        key_text = binary_to_text(expanded_key)
+        key_hex = binary_to_hex(expanded_key)
+
+        # Отображаем текущие данные в разных форматах перед полями для редактирования
+        ttk.Label(root, text="Текущие зашифрованные данные:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный текст: {encrypted_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатеричный: {encrypted_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {encrypted_data}", style="Small.TLabel").pack(pady=5)
+
+        ttk.Label(root, text="Текущий ключ:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный текст: {key_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатеричный: {key_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {expanded_key}", style="Small.TLabel").pack(pady=5)
+
+
+        # Отображение полей для редактирования
+        ttk.Label(root, text="Шифрованные данные (для редактирования):", style="TLabel").pack(pady=5)
+        encrypted_entry = ttk.Entry(root, width=100)
+        encrypted_entry.insert(0, encrypted_data)
+        encrypted_entry.pack(pady=5)
+
+        ttk.Label(root, text="Расширенный ключ (для редактирования):", style="TLabel").pack(pady=5)
+        key_entry = ttk.Entry(root, width=100)
+        key_entry.insert(0, expanded_key)
+        key_entry.pack(pady=5)
+
+        # Выпадающий список для формата данных
+        ttk.Label(root, text="Выберите формат данных:", style="TLabel").pack(pady=5)
+        text_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
+        text_format.pack(pady=5)
+        text_format.current(0)  # По умолчанию "Бинарный"
+
+        # Выпадающий список для формата ключа
+        ttk.Label(root, text="Выберите формат ключа:", style="TLabel").pack(pady=5)
+        key_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
+        key_format.pack(pady=5)
+        key_format.current(0)  # По умолчанию "Бинарный"
+
+        # Кнопка для сохранения данных
+        ttk.Button(root, text="Сохранить", command=lambda: save_encrypted_dataset(encrypted_entry, key_entry, text_format, key_format), style="TButton").pack(pady=10)
+
+        # Кнопка для возврата в рабочее меню
+        ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+    
+        # Кнопки для выбора действий
+    ttk.Button(window, text="Обычные", command=lambda: [handle_regular_data(), window.destroy()]).pack(pady=5)
+    ttk.Button(window, text="Шифрованные", command=lambda: [handle_encrypted_data(), window.destroy()]).pack(pady=5)
+
+
+# Функция для сохранения отредактированных зашифрованных данных
+def save_encrypted_dataset(encrypted_entry, key_entry, text_format, key_format):
+    # Получаем путь к папке проекта
+    current_directory = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
+    project_files_folder = os.path.join(current_directory, "project_files")  # Папка project_files
+    encrypted_filename = os.path.join(project_files_folder, "encrypted_text.txt")
+    key_filename = os.path.join(project_files_folder, "expanded_key.txt")
+    
+    # Получаем данные из полей ввода
+    encrypted_data = encrypted_entry.get()
+    expanded_key = key_entry.get()
+
+    # Преобразуем зашифрованные данные и ключ в бинарный формат на основе выбранного формата
+    if text_format.get() == "Обычный":
+        encrypted_binary = text_to_binary(encrypted_data)
+    elif text_format.get() == "Шестнадцатиричный":
+        encrypted_binary = hex_to_binary(encrypted_data)
+    elif text_format.get() == "Бинарный":
+        encrypted_binary = encrypted_data
+
+    if key_format.get() == "Обычный":
+        key_binary = text_to_binary(expanded_key)
+    elif key_format.get() == "Шестнадцатиричный":
+        key_binary = hex_to_binary(expanded_key)
+    elif key_format.get() == "Бинарный":
+        key_binary = expanded_key
+
+    # Открываем файл и записываем зашифрованный текст в бинарном формате
+    with open(encrypted_filename, 'w') as file:
+        file.write("Формат: Бинарный\n")
+        file.write(f"Данные: {encrypted_binary}\n")
+    
+    # Открываем файл и записываем расширенный ключ в бинарном формате
+    with open(key_filename, 'w') as file:
+        file.write("Формат: Бинарный\n")
+        file.write(f"Данные: {key_binary}\n")
+    
+    # Сообщаем об успешном сохранении
+    messagebox.showinfo("Результат", f"Зашифрованные данные и ключ сохранены в файлы:\n{encrypted_filename} и {key_filename}")
 
 # Функция для сохранения данных с проверками и выводом ошибок в виде всплывающих окон
 def save_data(text_entry, text_format, key_entry, key_format):
@@ -516,7 +638,7 @@ def clear_screen():
 # Основное окно
 root = tk.Tk()
 root.title("Программа анализа и шифрования по алгоритму DES")
-root.geometry("800x500")
+root.geometry("800x700")
 root.configure(bg="#ADD8E6")  # Устанавливаем темный фон
 
 # Настройка темной темы с использованием ttk стилей
