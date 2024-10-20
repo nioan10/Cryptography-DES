@@ -148,7 +148,8 @@ def show_encrypt_decrypt():
         elif key_format == "Бинарный":
             key_binary = key  # Уже в бинарном виде
             key_hex = binary_to_hex(key)
-        
+
+    
         # Отображаем текущий текст в бинарном и шестнадцатеричном форматах
         ttk.Label(root, text=f"Текущий текст (bin): {text_binary}", style="Small.TLabel").pack(pady=5)
         ttk.Label(root, text=f"Текущий текст (hex): {text_hex}", style="Small.TLabel").pack(pady=5)
@@ -156,6 +157,8 @@ def show_encrypt_decrypt():
         # Отображаем текущий ключ в бинарном и шестнадцатеричном форматах
         ttk.Label(root, text=f"Текущий ключ (bin): {key_binary}", style="Small.TLabel").pack(pady=5)
         ttk.Label(root, text=f"Текущий ключ (hex): {key_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"_____________________________________________________________", style="Small.TLabel").pack(pady=5)
+
 
         print(key_binary, len(key_binary))
         try:
@@ -179,18 +182,79 @@ def show_encrypt_decrypt():
         save_encrypted_data(encrypted_data)
         # Записываем расширенный ключ в файл
         save_expanded_key(expanded_key)
-
-
-
+        ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
 
     def on_decrypt():
-        messagebox.showinfo("Информация", "Функция дешифровки в разработке.")
-        ttk.Button(root, text="Назад", command=show_main_menu, style="TButton").pack(pady=5)
+        # Загружаем информацию из файлов
+        encrypted_data, expanded_key = load_encrypted_data_and_key()
+        if encrypted_data is None or expanded_key is None:
+            return  # Если данные не найдены, возвращаемся в главное меню
+
+        # Отображаем шифрованный текст в бинарном и шестнадцатеричном форматах
+        ttk.Label(root, text=f"Шифрованный текст (bin): {encrypted_data}", style="Small.TLabel").pack(pady=5)
+        encrypted_hex = binary_to_hex(encrypted_data)  # Преобразуем в hex
+        ttk.Label(root, text=f"Шифрованный текст (hex): {encrypted_hex}", style="Small.TLabel").pack(pady=5)
+
+        # Отображаем расширенный ключ в бинарном и шестнадцатеричном форматах
+        ttk.Label(root, text=f"Расширенный ключ (bin): {expanded_key}", style="Small.TLabel").pack(pady=5)
+        key_hex = binary_to_hex(expanded_key)  # Преобразуем в hex
+        ttk.Label(root, text=f"Расширенный ключ (hex): {key_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"_____________________________________________________________", style="Small.TLabel").pack(pady=5)
+        # Дешифруем данные с помощью функции из файла coding.py
+
+        try:
+            decrypted_binary = coding.decrypt(encrypted_data, expanded_key)  # Используем расширенный ключ
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка при дешифровке: {str(e)}")
+            return
+
+        # Преобразуем дешифрованный текст в различные форматы
+        decrypted_text = binary_to_text(decrypted_binary)  # Обычный текст
+        decrypted_hex = binary_to_hex(decrypted_binary)  # Шестнадцатеричный формат
+
+        # Отображаем результаты дешифровки
+        ttk.Label(root, text=f"Дешифрованный текст (обычный): {decrypted_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Дешифрованный текст (hex): {decrypted_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Дешифрованный текст (bin): {decrypted_binary}", style="Small.TLabel").pack(pady=5)
+
+        # Отображаем ключ в бинарном и шестнадцатеричном форматах
+        key_hex = binary_to_hex(expanded_key)
+        ttk.Label(root, text=f"Ключ (hex): {key_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Ключ (bin): {expanded_key}", style="Small.TLabel").pack(pady=5)
+        ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+
     
+
+        
     # Кнопки для выбора действий
     ttk.Button(window, text="Шифрование", command=lambda: [on_encrypt(), window.destroy()]).pack(pady=5)
     ttk.Button(window, text="Дешифровка", command=lambda: [on_decrypt(), window.destroy()]).pack(pady=5)
+
+def load_encrypted_data_and_key():
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
+    project_files_folder = os.path.join(project_folder, "project_files")
+
+    # Файлы с зашифрованным текстом и расширенным ключом
+    encrypted_filename = os.path.join(project_files_folder, "encrypted_text.txt")
+    key_filename = os.path.join(project_files_folder, "expanded_key.txt")
+        
+    # Проверка существования файлов
+    if not os.path.exists(encrypted_filename) or not os.path.exists(key_filename):
+        messagebox.showerror("Ошибка", "Файлы с зашифрованным текстом или ключом не найдены.")
+        show_work_menu()  # Возвращаемся в главное меню
+        return None, None
+
+    # Загрузка зашифрованного текста
+    with open(encrypted_filename, 'r') as file:
+        encrypted_data = file.readlines()[1].strip().split(": ")[1]
+
+        # Загрузка расширенного ключа
+    with open(key_filename, 'r') as file:
+        expanded_key = file.readlines()[1].strip().split(": ")[1]
+
+    return encrypted_data, expanded_key
 
 def save_encrypted_data(encrypted_data):
     project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
