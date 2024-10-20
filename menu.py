@@ -453,6 +453,10 @@ def set_data():
 
         # Кнопка для возврата к рабочему меню
         ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+        note = ("Текст должен содержать ровно 8 символов, 16 символов в шестнадцатиричном формате, или 64 бита в бинарном формате.\n"
+        "Ключ: ровно 7 символов, 14 символов в шестнадцатиричном формате, или 56 бит в бинарном формате.")
+        ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
+
 
     # Функция для обработки шифрованных данных
     def handle_encrypted_data():
@@ -520,6 +524,10 @@ def set_data():
 
         # Кнопка для возврата в рабочее меню
         ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+        note = ("Шифрованный текст должен содержать ровно 8 символов, 16 символов в шестнадцатиричном формате, или 64 бита в бинарном формате.\n"
+        "Ключ: ровно 8 символов, 16 символов в шестнадцатиричном формате, или 64 бита в бинарном формате.")
+        ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
     
         # Кнопки для выбора действий
     ttk.Button(window, text="Обычные", command=lambda: [handle_regular_data(), window.destroy()]).pack(pady=5)
