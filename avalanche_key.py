@@ -1,6 +1,8 @@
 import coding
 import pandas as pd
 
+
+
 # Функция для изменения одного бита в бинарной строке
 def flip_bit(binary_string, bit_position):
     bit_list = list(binary_string)
@@ -16,12 +18,11 @@ def check_message_length(text_binary):
 # Основная функция для анализа лавинного эффекта по ключу
 def analyze_avalanche_effect_key(text, key, bit_position):
     # Преобразуем текст и ключ в двоичный формат
-    text_binary = coding.text_to_binary(text)
-    key_binary = coding.text_to_binary(key)
-
+    key_binary = key
+    text_binary = text
     # Проверяем длину ключа
     if len(key_binary) != 64:
-        raise ValueError("Ключ должен быть длиной 56 бит (7 символов)")
+        raise ValueError("Ключ должен быть длиной 64 бит после расширения")
 
     # Проверяем длину сообщения (должно быть кратно 64 битам)
     check_message_length(text_binary)
@@ -77,17 +78,17 @@ def analyze_avalanche_effect_key(text, key, bit_position):
 
     # Создаем таблицу с результатами
     comparison_df = pd.DataFrame(comparison_table)
-
+    print(comparison_df)
     return comparison_df
 
 # Пример использования
-text = "EXAMPLEEEXAMPLEE"  # Сообщение длиной 128 бит
-key = "KEY12345"         # Исходный ключ длиной 56 бит
-bit_position = 10        # Бит, который изменим в ключе (например, 10-й бит)
+#text = "EXAMPLEEEXAMPLEE"  # Сообщение длиной 128 бит
+#key = "KEY12345"         # Исходный ключ длиной 56 бит
+#bit_position = 10        # Бит, который изменим в ключе (например, 10-й бит)
 
 # Выполняем анализ лавинного эффекта при изменении одного бита в ключе
-comparison_table = analyze_avalanche_effect_key(text, key, bit_position)
+#comparison_table = analyze_avalanche_effect_key(text, key, bit_position)
 
 # Выводим таблицу
-print("Сравнение отличий битов на каждом раунде:")
-print(comparison_table)
+#print("Сравнение отличий битов на каждом раунде:")
+#print(comparison_table)
