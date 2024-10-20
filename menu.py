@@ -12,6 +12,7 @@ import coding
 import time
 import avalanche_key 
 import avalanche
+import avalanche_all
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -322,11 +323,21 @@ def show_avalanche_effect():
         window.destroy()  # Закрываем окно выбора
         show_message_avalanche_analysis()
 
+    def handle_avalanche_key_and_message():
+        window.destroy()  # Закрываем окно выбора
+        show_key_and_message_avalanche_analysis()
+
     # Кнопки для выбора
     ttk.Button(window, text="Анализ по ключу", command=handle_avalanche_key).pack(pady=5)
     ttk.Button(window, text="Анализ по сообщению", command=handle_avalanche_message).pack(pady=5)
+    ttk.Button(window, text="Анализ по ключу и сообщению", command=handle_avalanche_key_and_message).pack(pady=5)
+
 
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+##########################################################################################################
+# # Анализ лавинного эффекта по сообщению
+##########################################################################################################
 
 def show_message_avalanche_analysis():
     clear_screen()
@@ -394,7 +405,6 @@ def show_message_avalanche_analysis():
     ttk.Button(root, text="Запустить анализ", command=run_message_avalanche_analysis).pack(pady=10)
     ttk.Button(root, text="Назад", command=show_avalanche_effect).pack(pady=10)
 
-
 ##########################################################################################################
 # # Анализ лавинного эффекта по ключу
 ##########################################################################################################
@@ -450,6 +460,95 @@ def show_key_avalanche_analysis():
 
     # Кнопка для запуска анализа
     ttk.Button(root, text="Запустить анализ", command=run_key_avalanche_analysis).pack(pady=10)
+    ttk.Button(root, text="Назад", command=show_avalanche_effect).pack(pady=10)
+
+##########################################################################################################
+# # Анализ лавинного эффекта по ключу и сообщению
+##########################################################################################################
+
+def show_key_and_message_avalanche_analysis():
+    clear_screen()
+
+    # Поле для ввода текста
+    ttk.Label(root, text="Введите текст для анализа (кратно 8 символам):", style="TLabel").pack(pady=5)
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.pack(pady=5)
+
+    # Поле для ввода ключа
+    ttk.Label(root, text="Введите ключ для анализа (ровно 7 символов):", style="TLabel").pack(pady=5)
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.pack(pady=5)
+
+    # Поле для ввода позиции изменяемого бита в сообщении
+    ttk.Label(root, text="Введите позицию изменяемого бита в сообщении (0-N):", style="TLabel").pack(pady=5)
+    bit_position_message_entry = ttk.Entry(root, width=10)
+    bit_position_message_entry.pack(pady=5)
+
+    # Поле для ввода позиции изменяемого бита в ключе
+    ttk.Label(root, text="Введите позицию изменяемого бита в ключе (0-63):", style="TLabel").pack(pady=5)
+    bit_position_key_entry = ttk.Entry(root, width=10)
+    bit_position_key_entry.pack(pady=5)
+
+    def run_key_and_message_avalanche_analysis():
+        text = text_entry.get()
+        key = key_entry.get()
+        bit_position_message = bit_position_message_entry.get()
+        bit_position_key = bit_position_key_entry.get()
+
+        # Проверки: длина текста и ключа
+        if len(text) % 8 != 0:
+            messagebox.showerror("Ошибка", "Текст должен быть кратен 8 символам (64 бита).")
+            return
+        if len(key) != 7:
+            messagebox.showerror("Ошибка", "Ключ должен быть длиной ровно 7 символов (56 бит).")
+            return
+        if not bit_position_message.isdigit() or not (0 <= int(bit_position_message) < len(text) * 8):
+            messagebox.showerror("Ошибка", "Позиция изменяемого бита в сообщении должна быть числом в пределах текста.")
+            return
+        if not bit_position_key.isdigit() or not (0 <= int(bit_position_key) < 64):
+            messagebox.showerror("Ошибка", "Позиция изменяемого бита в ключе должна быть числом от 0 до 63.")
+            return
+
+        # Запуск анализа лавинного эффекта по ключу и сообщению
+        try:
+            new_key = text_to_binary(key)
+            new_text = text_to_binary(text)
+            new_key = coding.add_parity_bits(new_key)
+            comparison_table_message, matr_message, comparison_table_key, matr_key = avalanche_all.analyze_avalanche_effect_key_and_message(new_text, new_key, int(bit_position_message), int(bit_position_key))
+
+            print("Результат анализа лавинного эффекта по сообщению и ключу:\n", comparison_table_message, comparison_table_key)
+            messagebox.showinfo("Результат", "Анализ лавинного эффекта выполнен по сообщению и ключу. Проверьте консоль для деталей.")
+            
+            # Вычисляем параметры d1 и d3 для обоих случаев
+            d1_message, d3_message = calculate_d1_d3(comparison_table_message, len(new_text))
+            d2_message = calculate_d2(matr_message)
+            d4_message = calculate_d4(matr_message)
+
+            d1_key, d3_key = calculate_d1_d3(comparison_table_key, len(new_text))
+            d2_key = calculate_d2(matr_key)
+            d4_key = calculate_d4(matr_key)
+
+            # Отображаем результаты
+            ttk.Label(root, text=f"Коэффициенты для Сообщения:", style="TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Среднее число бит выхода - {d1_message}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень полноты преобразования - {d2_message}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень лавинного эффекта - {d3_message}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень соответствия строгому лавинному критерию - {d4_message}", style="Small.TLabel").pack(pady=5)
+
+            ttk.Label(root, text=f"Коэффициенты для Ключа:", style="TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Среднее число бит выхода - {d1_key}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень полноты преобразования - {d2_key}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень лавинного эффекта - {d3_key}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень соответствия строгому лавинному критерию - {d4_key}", style="Small.TLabel").pack(pady=5)
+
+            show_graph(comparison_table_message)  # График для сообщения
+            show_graph(comparison_table_key)      # График для ключа
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Произошла ошибка: {str(e)}")
+
+    # Кнопка для запуска анализа
+    ttk.Button(root, text="Запустить анализ", command=run_key_and_message_avalanche_analysis).pack(pady=10)
     ttk.Button(root, text="Назад", command=show_avalanche_effect).pack(pady=10)
 
 ##########################################################################################################
