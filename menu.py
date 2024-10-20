@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-import tkinter.messagebox as messagebox
 import os
+import tkinter.messagebox as messagebox
 
 # Функция для перехода на главное меню
 def show_main_menu():
@@ -58,24 +58,112 @@ def show_avalanche_effect():
     ttk.Label(root, text="Раздел Анализ лавинного эффекта", style="TLabel").pack(pady=10)
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
-# Функция для отображения текущих данных
+# Функции для преобразования данных
+def text_to_binary(text):
+    return ''.join(format(ord(c), '08b') for c in text)
+
+def text_to_hex(text):
+    return ''.join(format(ord(c), '02x') for c in text).upper()
+
+def binary_to_text(binary_data):
+    return ''.join(chr(int(binary_data[i:i+8], 2)) for i in range(0, len(binary_data), 8))
+
+def hex_to_text(hex_data):
+    return ''.join(chr(int(hex_data[i:i+2], 16)) for i in range(0, len(hex_data), 2))
+
+# Функция для отображения текущих данных (текст и ключ)
 def show_current_data():
     clear_screen()
-    ttk.Label(root, text="Текущие данные: (здесь будут данные)", style="TLabel").pack(pady=10)
+
+    # Получаем путь к папке проекта
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка, где находится скрипт
+    project_files_folder = os.path.join(project_folder, "project_files")
+    
+    text_data = ""
+    key_data = ""
+    text_format = ""
+    key_format = ""
+
+    # Проверка наличия файла с текстом
+    text_filename = os.path.join(project_files_folder, "text_data.txt")
+    if os.path.exists(text_filename):
+        with open(text_filename, 'r') as file:
+            lines = file.readlines()
+            text_format = lines[0].strip().split(": ")[1]
+            text_data = lines[1].strip().split(": ")[1]
+    else:
+        messagebox.showerror("Ошибка", "Файл с текстом не найден. Данные еще не были сохранены.")
+        return
+
+    # Проверка наличия файла с ключом
+    key_filename = os.path.join(project_files_folder, "key_data.txt")
+    if os.path.exists(key_filename):
+        with open(key_filename, 'r') as file:
+            lines = file.readlines()
+            key_format = lines[0].strip().split(": ")[1]
+            key_data = lines[1].strip().split(": ")[1]
+    else:
+        messagebox.showerror("Ошибка", "Файл с ключом не найден. Данные еще не были сохранены.")
+        return
+
+    # Функция для конвертации данных во все форматы
+    def convert_and_show_all_formats():
+        # Конвертируем текст
+        if text_format == "Бинарный":
+            original_text = binary_to_text(text_data)
+            hex_text = hex(int(text_data, 2))[2:].upper()
+            binary_text = text_data
+        elif text_format == "Шестнадцатиричный":
+            original_text = hex_to_text(text_data)
+            hex_text = text_data
+            binary_text = bin(int(text_data, 16))[2:].zfill(64)
+        else:
+            original_text = text_data
+            hex_text = text_to_hex(text_data)
+            binary_text = text_to_binary(text_data)
+
+        # Конвертируем ключ
+        if key_format == "Бинарный":
+            original_key = binary_to_text(key_data)
+            hex_key = hex(int(key_data, 2))[2:].upper()
+            binary_key = key_data
+        elif key_format == "Шестнадцатиричный":
+            original_key = hex_to_text(key_data)
+            hex_key = key_data
+            binary_key = bin(int(key_data, 16))[2:].zfill(56)
+
+        # Отображаем результат конвертации для текста
+        ttk.Label(root, text="Текущий текст:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный: {original_text}", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатиричный: {hex_text}", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {binary_text}", style="TLabel").pack(pady=5)
+
+        # Отображаем результат конвертации для ключа
+        ttk.Label(root, text="Текущий ключ:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатиричный: {hex_key}", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {binary_key}", style="TLabel").pack(pady=5)
+
+    # Отображаем конвертированные данные сразу во всех форматах
+    convert_and_show_all_formats()
+
+    # Кнопка для возврата в главное меню
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+
+
 
 def set_data():
     clear_screen()
     
     # Функция для задания данных
     # Выпадающий список для выбора формата текста
-    ttk.Label(root, text="Выберите формат текста:", style="TLabel", anchor="center").pack(pady=5)
+    ttk.Label(root, text="Выберите формат блока текста:", style="TLabel", anchor="center").pack(pady=5)
     text_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
     text_format.pack(pady=5)
     text_format.current(2)  # По умолчанию "Обычный"
 
     # Поле для ввода текста
-    ttk.Label(root, text="Введите текст:", style="TLabel", anchor="center").pack(pady=5)
+    ttk.Label(root, text="Введите блок текста:", style="TLabel", anchor="center").pack(pady=5)
     text_entry = ttk.Entry(root, width=50)
     text_entry.pack(pady=5)
 
@@ -100,11 +188,6 @@ def set_data():
     note = ("Текст должен содержать ровно 64 бита в бинарном формате, 8 символов текста, или 16 символов в шестнадцатиричном формате.\n"
             "Ключ: строго 56 бит в бинарном, 7 символов в текстовом или 14 в шестнадцатиричном формате.")
     ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
-
-
-
-import os
-import tkinter.messagebox as messagebox
 
 # Функция для сохранения данных с проверками и выводом ошибок в виде всплывающих окон
 def save_data(text_entry, text_format, key_entry, key_format):
@@ -154,23 +237,6 @@ def save_data(text_entry, text_format, key_entry, key_format):
     except Exception as e:
         messagebox.showerror("Ошибка", f"Произошла ошибка при сохранении: {str(e)}")
         return
-    
-    # Если все прошло успешно
-    print("Текст и ключ успешно сохранены.")
-    print(f"Текст: {text}")
-    print(f"Формат текста: {text_format_selected}")
-    print(f"Ключ: {key}")
-    print(f"Формат ключа: {key_format_selected}")
-
-
-    print("Текст и ключ успешно сохранены.")
-    print(f"Текст: {text}")
-    print(f"Формат текста: {text_format_selected}")
-    print(f"Ключ: {key}")
-    print(f"Формат ключа: {key_format_selected}")
-
-
-
 
 
 # Функция для очистки экрана
