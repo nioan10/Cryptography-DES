@@ -10,7 +10,10 @@ import os
 import tkinter.messagebox as messagebox
 import coding
 import time
-
+import avalanche_key 
+import avalanche
+import matplotlib.pyplot as plt
+import numpy as np
 
 ##########################################################################################################
 # 
@@ -303,8 +306,202 @@ def save_expanded_key(expanded_key):
 
 def show_avalanche_effect():
     clear_screen()
-    ttk.Label(root, text="Раздел Анализ лавинного эффекта", style="TLabel").pack(pady=10)
+    ttk.Label(root, text="Анализ Лавинного Эффекта", style="TLabel").pack(pady=10)
+
+    # Всплывающее окно для выбора типа лавинного эффекта (по ключу или сообщению)
+    window = tk.Toplevel(root)
+    window.title("Выберите тип анализа лавинного эффекта")
+
+    ttk.Label(window, text="Выберите тип анализа лавинного эффекта", style="TLabel").pack(pady=10)
+
+    def handle_avalanche_key():
+        window.destroy()  # Закрываем окно выбора
+        show_key_avalanche_analysis()
+
+    def handle_avalanche_message():
+        window.destroy()  # Закрываем окно выбора
+        show_message_avalanche_analysis()
+
+    # Кнопки для выбора
+    ttk.Button(window, text="Анализ по ключу", command=handle_avalanche_key).pack(pady=5)
+    ttk.Button(window, text="Анализ по сообщению", command=handle_avalanche_message).pack(pady=5)
+
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+def show_message_avalanche_analysis():
+    clear_screen()
+
+    # Поле для ввода текста
+    ttk.Label(root, text="Введите текст для анализа (кратно 8 символам):", style="TLabel").pack(pady=5)
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.pack(pady=5)
+
+    # Поле для ввода ключа
+    ttk.Label(root, text="Введите ключ для анализа (ровно 7 символов):", style="TLabel").pack(pady=5)
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.pack(pady=5)
+
+    # Поле для ввода позиции бита
+    ttk.Label(root, text="Введите позицию изменяемого бита в сообщении (0-N):", style="TLabel").pack(pady=5)
+    bit_position_entry = ttk.Entry(root, width=10)
+    bit_position_entry.pack(pady=5)
+
+    def run_message_avalanche_analysis():
+        text = text_entry.get()
+        key = key_entry.get()
+        bit_position = bit_position_entry.get()
+
+        # Проверки: длина текста и ключа
+        if len(text) % 8 != 0:
+            messagebox.showerror("Ошибка", "Текст должен быть кратен 8 символам (64 бита).")
+            return
+        print(key,len(key))
+        if len(key) != 7:
+            messagebox.showerror("Ошибка", "Ключ должен быть длиной ровно 7 символов (56 бит).")
+            return
+        if not bit_position.isdigit() or not (0 <= int(bit_position) < len(text) * 8):
+            messagebox.showerror("Ошибка", "Позиция изменяемого бита должна быть числом в пределах текста.")
+            return
+
+        # Запуск анализа лавинного эффекта по сообщению
+        try:
+            new_key = text_to_binary(key)
+            new_text = text_to_binary(text)
+            print(len(new_key))
+            new_key = coding.add_parity_bits(new_key)
+            print(new_key, len(new_key))
+            comparison_table, matr = avalanche.analyze_avalanche_effect_message(new_text, new_key, int(bit_position))
+            print("Результат анализа лавинного эффекта по сообщению:\n", comparison_table)
+            messagebox.showinfo("Результат", "Анализ лавинного эффекта по сообщению выполнен. Проверьте консоль для деталей.")
+            
+            # Вычисляем параметры d1 и d3
+            d1, d3 = calculate_d1_d3(comparison_table, len(new_text))
+            d2 = calculate_d2(matr)
+            d4 = calculate_d4(matr)
+            ttk.Label(root, text=f"Коэффициенты", style="TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Среднее число бит выхода - {d1}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень полноты преобразования - {d2}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень лавинного эффекта - {d3}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень соответствия строгому лавинному критерию - {d4}", style="Small.TLabel").pack(pady=5)
+            print(matr)
+            
+            show_graph(comparison_table)
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Произошла ошибка: {str(e)}")
+
+    # Кнопка для запуска анализа
+    ttk.Button(root, text="Запустить анализ", command=run_message_avalanche_analysis).pack(pady=10)
+    ttk.Button(root, text="Назад", command=show_avalanche_effect).pack(pady=10)
+
+
+##########################################################################################################
+# # Анализ лавинного эффекта по ключу
+##########################################################################################################
+def show_key_avalanche_analysis():
+    clear_screen()
+
+    # Поле для ввода текста
+    ttk.Label(root, text="Введите текст для анализа (кратно 8 символам):", style="TLabel").pack(pady=5)
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.pack(pady=5)
+
+    # Поле для ввода ключа
+    ttk.Label(root, text="Введите ключ для анализа (ровно 7 символов):", style="TLabel").pack(pady=5)
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.pack(pady=5)
+
+    # Поле для ввода позиции бита
+    ttk.Label(root, text="Введите позицию изменяемого бита в ключе (0-63):", style="TLabel").pack(pady=5)
+    bit_position_entry = ttk.Entry(root, width=10)
+    bit_position_entry.pack(pady=5)
+
+    def run_key_avalanche_analysis():
+        text = text_entry.get()
+        key = key_entry.get()
+        bit_position = bit_position_entry.get()
+
+        # Запуск анализа лавинного эффекта по ключу
+        try:
+            new_key = text_to_binary(key)
+            new_text = text_to_binary(text)
+            print(new_key, len(new_key))
+            new_key = coding.add_parity_bits(new_key)
+            print(new_key, len(new_key))
+            comparison_table, matr = avalanche_key.analyze_avalanche_effect_key(new_text, new_key, int(bit_position))
+            print("Результат анализа лавинного эффекта по ключу:\n", comparison_table)
+            messagebox.showinfo("Результат", "Анализ лавинного эффекта по ключу выполнен. Проверьте консоль для деталей.")
+            
+            # Вычисляем параметры d1 и d3
+            d1, d3 = calculate_d1_d3(comparison_table, len(new_text))
+            d2 = calculate_d2(matr)
+            d4 = calculate_d4(matr)
+            ttk.Label(root, text=f"Коэффициенты", style="TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Среднее число бит выхода - {d1}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень полноты преобразования - {d2}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень лавинного эффекта - {d3}", style="Small.TLabel").pack(pady=5)
+            ttk.Label(root, text=f"Степень соответствия строгому лавинному критерию - {d4}", style="Small.TLabel").pack(pady=5)
+            print(matr)
+            
+            show_graph(comparison_table)
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Произошла ошибка: {str(e)}")
+
+    # Кнопка для запуска анализа
+    ttk.Button(root, text="Запустить анализ", command=run_key_avalanche_analysis).pack(pady=10)
+    ttk.Button(root, text="Назад", command=show_avalanche_effect).pack(pady=10)
+
+##########################################################################################################
+# # Служебные функции
+##########################################################################################################
+def show_graph(comparison_table):
+    rounds = comparison_table['Раунд']
+    total_diffs = comparison_table['Всего отличий']
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(rounds, total_diffs, marker='o', linestyle='-', color='b')
+    plt.title('Лавинный эффект: Изменение количества битов по раундам')
+    plt.xlabel('Раунд')
+    plt.ylabel('Общее количество измененных битов')
+    plt.grid(True)
+
+    # Отображаем график в отдельном окне
+    plt.show()
+
+def calculate_d1_d3(comparison_table, len_text):
+    # Получаем данные из таблицы
+    rounds = comparison_table['Раунд']
+    total_diffs = comparison_table['Всего отличий']
+
+    # Количество раундов
+    n = len(rounds)
+    # Количество битов (64 для DES)
+    m = len_text
+    # Предположим, что анализ проводится по одному блоку (можно модифицировать для разных случаев)
+    N = len_text/64
+    print(m,N)
+    # Вычисление d1 (среднее число изменившихся битов)
+    d1 = total_diffs.mean()
+
+    # Вычисление d3 (степень лавинного эффекта)
+    total_sum = total_diffs.sum()
+    d3 = 1 - abs(total_sum) / (n * m)
+
+    return d1, d3
+
+def calculate_d2(a_ij_matrix):
+    n, m = a_ij_matrix.shape
+    num_zeros = np.sum(a_ij_matrix == 0)
+    d2 = 1 - (num_zeros / (n * m))
+    return d2
+
+def calculate_d4(a_ij_matrix):
+    n, m = a_ij_matrix.shape
+    total_sum = np.sum(a_ij_matrix)
+    N = n * m
+    d4 = 1 - abs(2 * total_sum - N) / N
+    return d4
 
 ##########################################################################################################
 # # Функции перевода
