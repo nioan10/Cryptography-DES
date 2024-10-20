@@ -235,13 +235,13 @@ def add_parity_bits(binary_key):
 
 
 
-test1 = '1011101011101010111011111011100011101011111000101011101011101011'   
-test2 = '908F6CA04B08D4'
+#test1 = '1011101011101010111011111011100011101011111000101011101011101011'   
+#test2 = '908F6CA04B08D4'
 
-temp = hex_to_binary(test2, len(test2))
-print(temp, len(temp))
-test2 = add_parity_bits(temp)
-print(test2, len(test2))
+#temp = hex_to_binary(test2, len(test2))
+#print(temp, len(temp))
+#test2 = add_parity_bits(temp)
+#print(test2, len(test2))
 
 
 
@@ -260,16 +260,16 @@ def binary_to_text(binary_data):
 ####################################################################
 # Тестовый полигон
 ####################################################################
-test_text = "LALALALALALALALA"
-binary_output = text_to_binary(test_text)
-print(binary_output)
-print(binary_to_text(binary_output))
+#test_text = "LALALALA"
+#binary_output = text_to_binary(test_text)
+#print(binary_output)
+#print(binary_to_text(binary_output))
 
-b = encrypt(binary_output, test2)
-print('Шифрованный результат: ', b)
-decr = decrypt(b, test2)
-print('Расшифрованная информция: ', bin_to_hex(decr, 64))
-print(binary_to_text(decr))
+#b = encrypt(binary_output, test2)
+#print('Шифрованный результат: ', b)
+#decr = decrypt(b, test2)
+#print('Расшифрованная информция: ', bin_to_hex(decr, 64))
+#print(binary_to_text(decr))
 #print(binary_to_text(decrypt(b, test2)))
 #for key in generate_keys(binary_output):
 #    print(bin_to_hex(key, 48))

@@ -1,9 +1,21 @@
+##########################################################################################################
+# 
+# # Шаблон комментария раздела
+#                   
+##########################################################################################################
+
 import tkinter as tk
 from tkinter import ttk
 import os
 import tkinter.messagebox as messagebox
+import coding
 
-# Функция для перехода на главное меню
+
+##########################################################################################################
+# 
+# # Главная функция главного меню - сюрприз - сюриприз
+#                   
+##########################################################################################################
 def show_main_menu():
     clear_screen()
     
@@ -14,7 +26,12 @@ def show_main_menu():
     ttk.Button(root, text="О программе", command=show_about, style="TButton").pack(pady=10)
     ttk.Button(root, text="Выход", command=root.quit, style="TButton").pack(pady=10)
 
-# Функция для отображения раздела "Создатели"
+##########################################################################################################
+# 
+# # Функции отображения информации о программе.
+#                   Реализация основална на методе messagebox библиотеки tkinter
+##########################################################################################################
+# Функция для отображения раздела Создатели"
 def show_creators():
     creators_message = (
         "Создатели программы:\n\n"
@@ -29,7 +46,6 @@ def show_creators():
     messagebox.showinfo("Создатели программы", creators_message)
         # Возвращаемся в главное меню после закрытия окна
     show_main_menu()
-
 
 # Функция для отображения раздела "О программе"
 def show_about():
@@ -59,31 +75,164 @@ def show_work_menu():
     ttk.Button(root, text="Задать данные", command=set_data, style="TButton").pack(pady=5)
     ttk.Button(root, text="Отобразить текущие данные", command=show_current_data, style="TButton").pack(pady=5)
     ttk.Label(root, text="Процессы шифрования и дешифровки", style="TLabel").pack(pady=10)
-    ttk.Button(root, text="Шифровка", command=show_encrypt, style="TButton").pack(pady=5)
-    ttk.Button(root, text="Дешифровка", command=show_decrypt, style="TButton").pack(pady=5)
+    ttk.Button(root, text="Шифрование и дешифровка", command=show_encrypt_decrypt, style="TButton").pack(pady=5)
     ttk.Label(root, text="Характеризация лавинного эффекта", style="TLabel").pack(pady=10)
     ttk.Button(root, text="Анализ лавинного эффекта", command=show_avalanche_effect, style="TButton").pack(pady=5)
     ttk.Button(root, text="Назад", command=show_main_menu, style="TButton").pack(pady=5)
 
-# Функция для раздела "Шифровка"
-def show_encrypt():
-    clear_screen()
-    ttk.Label(root, text="Раздел Шифрования данных", style="TLabel").pack(pady=10)
-    ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+##########################################################################################################
+# 
+# # Реализация меню шифрования и дешифровки
+#                   
+##########################################################################################################
 
-# Функция для раздела "Дешифровка"
-def show_decrypt():
-    clear_screen()
-    ttk.Label(root, text="Раздел Дешифрования данных", style="TLabel").pack(pady=10)
-    ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+def get_current_data():
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка, где находится скрипт
+    project_files_folder = os.path.join(project_folder, "project_files")
+    
+    text_filename = os.path.join(project_files_folder, "text_data.txt")
+    key_filename = os.path.join(project_files_folder, "key_data.txt")
+    
+    # Проверяем, существуют ли файлы с данными
+    if not os.path.exists(text_filename) or not os.path.exists(key_filename):
+        messagebox.showerror("Ошибка", "Данные не найдены.")
+        return None, None, None, None
 
-# Функция для раздела "Анализ лавинного эффекта"
+    # Чтение текстового файла
+    with open(text_filename, 'r') as text_file:
+        text_format = text_file.readline().strip().split(": ")[1]  # Формат текста
+        text_data = text_file.readline().strip().split(": ")[1]     # Данные текста
+
+    # Чтение ключевого файла
+    with open(key_filename, 'r') as key_file:
+        key_format = key_file.readline().strip().split(": ")[1]  # Формат ключа
+        key_data = key_file.readline().strip().split(": ")[1]     # Данные ключа
+
+    return text_format, text_data, key_format, key_data
+
+def show_encrypt_decrypt():
+    clear_screen()  # Очищаем текущее содержимое экрана
+
+    # Всплывающее окно для выбора действия
+    window = tk.Toplevel(root)
+    window.title("Выберите действие")
+    
+    ttk.Label(window, text="Выберите действие", style="TLabel").pack(pady=10)
+    
+
+    style.configure("Small.TLabel", font=("Helvetica", 8))  # Установили шрифт и размер 8
+
+    def on_encrypt():
+        # Загружаем данные из файлов
+        text_format, text, key_format, key = get_current_data()
+        if text is None or key is None:
+            return  # Если данные не найдены, завершить выполнение
+
+        # Преобразуем текст и ключ в бинарный и шестнадцатеричный форматы
+        if text_format == "Обычный":
+            text_binary = text_to_binary(text)
+            text_hex = text_to_hex(text)
+        elif text_format == "Шестнадцатиричный":
+            text_binary = hex_to_binary(text)  # Преобразуем из hex в binary
+            text_hex = text  # Уже в hex
+        elif text_format == "Бинарный":
+            text_binary = text  # Уже в бинарном виде
+            text_hex = binary_to_hex(text)
+
+        if key_format == "Обычный":
+            key_binary = text_to_binary(key)
+            key_hex = text_to_hex(key)
+        elif key_format == "Шестнадцатиричный":
+            key_binary = hex_to_binary(key)  # Преобразуем из hex в binary
+            key_hex = key  # Уже в hex
+        elif key_format == "Бинарный":
+            key_binary = key  # Уже в бинарном виде
+            key_hex = binary_to_hex(key)
+        
+        # Отображаем текущий текст в бинарном и шестнадцатеричном форматах
+        ttk.Label(root, text=f"Текущий текст (bin): {text_binary}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Текущий текст (hex): {text_hex}", style="Small.TLabel").pack(pady=5)
+
+        # Отображаем текущий ключ в бинарном и шестнадцатеричном форматах
+        ttk.Label(root, text=f"Текущий ключ (bin): {key_binary}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Текущий ключ (hex): {key_hex}", style="Small.TLabel").pack(pady=5)
+
+        print(key_binary, len(key_binary))
+        try:
+            expanded_key = coding.add_parity_bits(key_binary)  # Функция расширения ключа
+            
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка при расширении ключа: {str(e)}")
+            return
+
+        # Шифруем данные с помощью функции из файла coding.py
+        try:
+            encrypted_data = coding.encrypt(text_binary, expanded_key)  # Используем расширенный ключ
+
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
+            return
+
+        # Отображаем результат шифрования
+        ttk.Label(root, text=f"Зашифрованный текст: {encrypted_data}", style="Small.TLabel").pack(pady=5)
+        # Записываем зашифрованный текст в файл
+        save_encrypted_data(encrypted_data)
+        # Записываем расширенный ключ в файл
+        save_expanded_key(expanded_key)
+
+
+
+
+
+    def on_decrypt():
+        messagebox.showinfo("Информация", "Функция дешифровки в разработке.")
+        ttk.Button(root, text="Назад", command=show_main_menu, style="TButton").pack(pady=5)
+    
+    # Кнопки для выбора действий
+    ttk.Button(window, text="Шифрование", command=lambda: [on_encrypt(), window.destroy()]).pack(pady=5)
+    ttk.Button(window, text="Дешифровка", command=lambda: [on_decrypt(), window.destroy()]).pack(pady=5)
+
+def save_encrypted_data(encrypted_data):
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
+    project_files_folder = os.path.join(project_folder, "project_files")  # Папка project_files
+    encrypted_filename = os.path.join(project_files_folder, "encrypted_text.txt")
+    
+    # Открываем файл и записываем зашифрованный текст
+    with open(encrypted_filename, 'w') as file:
+        file.write("Формат: Бинарный\n")
+        file.write(f"Данные: {encrypted_data}\n")
+    messagebox.showinfo("Результат шифрования", f"Шифрованный файл записан в файл {encrypted_filename}")
+
+def save_expanded_key(expanded_key):
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
+    project_files_folder = os.path.join(project_folder, "project_files")  # Папка project_files
+    key_filename = os.path.join(project_files_folder, "expanded_key.txt")
+
+    # Открываем файл и записываем расширенный ключ
+    with open(key_filename, 'w') as file:
+        file.write("Формат: Бинарный\n")
+        file.write(f"Данные: {expanded_key}\n")
+    
+    messagebox.showinfo("Результат шифрования", f"Шифрованный ключ записан в файл {key_filename}")
+
+
+##########################################################################################################
+# 
+# # Функция для раздела "Анализ лавинного эффекта"
+#                   
+##########################################################################################################
+
 def show_avalanche_effect():
     clear_screen()
     ttk.Label(root, text="Раздел Анализ лавинного эффекта", style="TLabel").pack(pady=10)
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
-# Функции для преобразования данных
+##########################################################################################################
+# # Отображение данных
+# #         Данные хранятся в соответствующем файле. Раздел содержит дополнительные функции дешифровки
+#               данных для отображения информации во всех доступных форматах  
+##########################################################################################################
+
 def text_to_binary(text):
     return ''.join(format(ord(c), '08b') for c in text)
 
@@ -95,6 +244,14 @@ def binary_to_text(binary_data):
 
 def hex_to_text(hex_data):
     return ''.join(chr(int(hex_data[i:i+2], 16)) for i in range(0, len(hex_data), 2))
+
+def binary_to_hex(binary_data):
+    return ''.join(format(int(binary_data[i:i+4], 2), 'x') for i in range(0, len(binary_data), 4)).upper()
+
+def hex_to_binary(hex_data):
+    return ''.join(format(int(c, 16), '04b') for c in hex_data)
+
+
 
 # Функция для отображения текущих данных (текст и ключ)
 def show_current_data():
@@ -156,6 +313,10 @@ def show_current_data():
             original_key = hex_to_text(key_data)
             hex_key = key_data
             binary_key = bin(int(key_data, 16))[2:].zfill(56)
+        else:
+            original_key = key_data
+            hex_key = text_to_hex(key_data)
+            binary_key = text_to_binary(key_data)
 
         # Отображаем результат конвертации для текста
         ttk.Label(root, text="Текущий текст:", style="TLabel").pack(pady=5)
@@ -165,6 +326,7 @@ def show_current_data():
 
         # Отображаем результат конвертации для ключа
         ttk.Label(root, text="Текущий ключ:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный: {original_key}", style="TLabel").pack(pady=5)
         ttk.Label(root, text=f"Шестнадцатиричный: {hex_key}", style="TLabel").pack(pady=5)
         ttk.Label(root, text=f"Бинарный: {binary_key}", style="TLabel").pack(pady=5)
 
@@ -174,8 +336,12 @@ def show_current_data():
     # Кнопка для возврата в главное меню
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
-
-
+##########################################################################################################
+# # Раздел задачи данных
+# #         В данном разделе предусмотрены функции задачи данных для шифрования блока текста алгоритмом DES
+#               Условия: Блок текста - строго 64 бита, ключ - строго 56 бит
+#               Включена: Запись данных в файл, включая информацию о формате заданных данных
+##########################################################################################################
 
 def set_data():
     clear_screen()
@@ -189,18 +355,18 @@ def set_data():
 
     # Поле для ввода текста
     ttk.Label(root, text="Введите блок текста:", style="TLabel", anchor="center").pack(pady=5)
-    text_entry = ttk.Entry(root, width=50)
+    text_entry = ttk.Entry(root, width=100)
     text_entry.pack(pady=5)
 
     # Выпадающий список для выбора формата ключа
     ttk.Label(root, text="Выберите формат ключа:", style="TLabel", anchor="center").pack(pady=5)
-    key_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный"], state="readonly")
+    key_format = ttk.Combobox(root, values=["Бинарный", "Шестнадцатиричный", "Обычный"], state="readonly")
     key_format.pack(pady=5)
     key_format.current(1)  # По умолчанию "Шестнадцатиричный"
 
     # Поле для ввода ключа
     ttk.Label(root, text="Введите ключ:", style="TLabel", anchor="center").pack(pady=5)
-    key_entry = ttk.Entry(root, width=50)
+    key_entry = ttk.Entry(root, width=100)
     key_entry.pack(pady=5)
 
     # Кнопка для сохранения введенных данных с проверкой
@@ -233,6 +399,20 @@ def save_data(text_entry, text_format, key_entry, key_format):
     elif text_format_selected == "Обычный":
         if len(text) != 8:
             messagebox.showerror("Ошибка", "Текст должен содержать ровно 8 символов.")
+            return
+        
+        # Проверка ключа
+    if key_format_selected == "Бинарный":
+        if len(key) != 56:
+            messagebox.showerror("Ошибка", "Ключ в бинарном формате должен содержать ровно 64 бита.")
+            return
+    elif key_format_selected == "Шестнадцатиричный":
+        if len(key) != 14:
+            messagebox.showerror("Ошибка", "Ключ в шестнадцатиричном формате должен содержать ровно 16 символов.")
+            return
+    elif key_format_selected == "Обычный":
+        if len(key) != 7:
+            messagebox.showerror("Ошибка", "Ключ должен содержать ровно 7 символов.")
             return
 
     # Получаем путь к папке проекта
