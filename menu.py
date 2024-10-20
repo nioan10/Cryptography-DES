@@ -390,21 +390,57 @@ def show_current_data():
 
         # Отображаем результат конвертации для текста
         ttk.Label(root, text="Текущий текст:", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Обычный: {original_text}", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Шестнадцатиричный: {hex_text}", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Бинарный: {binary_text}", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный: {original_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатиричный: {hex_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {binary_text}", style="Small.TLabel").pack(pady=5)
 
         # Отображаем результат конвертации для ключа
         ttk.Label(root, text="Текущий ключ:", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Обычный: {original_key}", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Шестнадцатиричный: {hex_key}", style="TLabel").pack(pady=5)
-        ttk.Label(root, text=f"Бинарный: {binary_key}", style="TLabel").pack(pady=5)
-
-    # Отображаем конвертированные данные сразу во всех форматах
+        ttk.Label(root, text=f"Обычный: {original_key}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатиричный: {hex_key}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {binary_key}", style="Small.TLabel").pack(pady=5)
     convert_and_show_all_formats()
 
+    def convert_encrypt():
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+        encrypted_data_file = os.path.join(current_directory, "project_files", "encrypted_text.txt")
+        expanded_key_file = os.path.join(current_directory, "project_files", "expanded_key.txt")
+
+        if not os.path.exists(encrypted_data_file) or not os.path.exists(expanded_key_file):
+            messagebox.showerror("Ошибка", "Файлы с зашифрованной информацией или ключом не найдены.")
+            return
+
+        # Чтение шифрованной информации и расширенного ключа
+        with open(encrypted_data_file, 'r') as file:
+            encrypted_data = file.readlines()[1].strip().split(": ")[1]
+
+        with open(expanded_key_file, 'r') as file:
+            expanded_key = file.readlines()[1].strip().split(": ")[1]
+
+        # Преобразуем зашифрованные данные во все форматы
+        encrypted_text = binary_to_text(encrypted_data)
+        encrypted_hex = binary_to_hex(encrypted_data)
+            
+        key_text = binary_to_text(expanded_key)
+        key_hex = binary_to_hex(expanded_key)
+
+        # Отображаем текущие данные в разных форматах перед полями для редактирования
+        ttk.Label(root, text="Текущие зашифрованные данные:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный текст: {encrypted_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатеричный: {encrypted_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {encrypted_data}", style="Small.TLabel").pack(pady=5)
+
+        ttk.Label(root, text="Текущий ключ:", style="TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Обычный текст: {key_text}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Шестнадцатеричный: {key_hex}", style="Small.TLabel").pack(pady=5)
+        ttk.Label(root, text=f"Бинарный: {expanded_key}", style="Small.TLabel").pack(pady=5) 
+    convert_encrypt()   
     # Кнопка для возврата в главное меню
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
+
+    note = ("Примечание: Данные могут не совпадать, если они были изменены.")
+    ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
+
 
 ##########################################################################################################
 # # Раздел задачи данных
