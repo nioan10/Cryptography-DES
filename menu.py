@@ -68,7 +68,11 @@ def show_about():
     messagebox.showinfo("О программе", about_message)
 
 
-# Функция для перехода к разделу "Перейти к работе"
+##########################################################################################################
+# 
+# # Главное меню
+#                   
+##########################################################################################################
 def show_work_menu():
     clear_screen()
     
@@ -87,6 +91,7 @@ def show_work_menu():
 #                   
 ##########################################################################################################
 
+# Получение текста для шифрования
 def get_current_data():
     project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка, где находится скрипт
     project_files_folder = os.path.join(project_folder, "project_files")
@@ -111,6 +116,7 @@ def get_current_data():
 
     return text_format, text_data, key_format, key_data
 
+# Главная функция шифрования и дешифровки
 def show_encrypt_decrypt():
     clear_screen()  # Очищаем текущее содержимое экрана
 
@@ -238,6 +244,7 @@ def show_encrypt_decrypt():
     ttk.Button(window, text="Шифрование", command=lambda: [on_encrypt(), window.destroy()]).pack(pady=5)
     ttk.Button(window, text="Дешифровка", command=lambda: [on_decrypt(), window.destroy()]).pack(pady=5)
 
+# Функция для подгрузки шифрованной информации
 def load_encrypted_data_and_key():
     project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
     project_files_folder = os.path.join(project_folder, "project_files")
@@ -262,6 +269,7 @@ def load_encrypted_data_and_key():
 
     return encrypted_data, expanded_key
 
+# Функция для сохранения информации о шифротексте
 def save_encrypted_data(encrypted_data):
     project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
     project_files_folder = os.path.join(project_folder, "project_files")  # Папка project_files
@@ -273,6 +281,7 @@ def save_encrypted_data(encrypted_data):
         file.write(f"Данные: {encrypted_data}\n")
     messagebox.showinfo("Результат шифрования", f"Шифрованный файл записан в файл {encrypted_filename}")
 
+# Функция для сохранения расширенного ключа шифрования
 def save_expanded_key(expanded_key):
     project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
     project_files_folder = os.path.join(project_folder, "project_files")  # Папка project_files
@@ -298,9 +307,9 @@ def show_avalanche_effect():
     ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
 ##########################################################################################################
-# # Отображение данных
-# #         Данные хранятся в соответствующем файле. Раздел содержит дополнительные функции дешифровки
-#               данных для отображения информации во всех доступных форматах  
+# # Функции перевода
+# #         Раздел со всеми основными функция перевода данных в разные форматы
+#               
 ##########################################################################################################
 
 def text_to_binary(text):
@@ -321,9 +330,12 @@ def binary_to_hex(binary_data):
 def hex_to_binary(hex_data):
     return ''.join(format(int(c, 16), '04b') for c in hex_data)
 
+##########################################################################################################
+# # Отображение данных
+# #         Данные хранятся в соответствующем файле. Раздел содержит дополнительные функции дешифровки
+#               данных для отображения информации во всех доступных форматах  
+##########################################################################################################
 
-
-# Функция для отображения текущих данных (текст и ключ)
 def show_current_data():
     clear_screen()
 
@@ -449,6 +461,7 @@ def show_current_data():
 #               Включена: Запись данных в файл, включая информацию о формате заданных данных
 ##########################################################################################################
 
+# Общее меню определяющее задание шифрованных данных или обычных
 def set_data():
     clear_screen()
     
@@ -569,7 +582,6 @@ def set_data():
     ttk.Button(window, text="Обычные", command=lambda: [handle_regular_data(), window.destroy()]).pack(pady=5)
     ttk.Button(window, text="Шифрованные", command=lambda: [handle_encrypted_data(), window.destroy()]).pack(pady=5)
 
-
 # Функция для сохранения отредактированных зашифрованных данных
 def save_encrypted_dataset(encrypted_entry, key_entry, text_format, key_format):
     # Получаем путь к папке проекта
@@ -674,6 +686,11 @@ def save_data(text_entry, text_format, key_entry, key_format):
         return
 
 
+##########################################################################################################
+# 
+# # Служебные функции и общая инициализация
+#                   
+##########################################################################################################
 # Функция для очистки экрана
 def clear_screen():
     for widget in root.winfo_children():
@@ -692,8 +709,6 @@ style = ttk.Style()
 style.configure("TButton", font=("Helvetica", 12), padding=10, background="#444444", foreground="black")
 style.configure("TLabel", font=("Helvetica", 12), background="#ADD8E6", foreground="black")
 style.configure("Small.TLabel", font=("Helvetica", 8), background="#ADD8E6", foreground="black")
-
-
 
 # Запуск приложения
 show_main_menu()
