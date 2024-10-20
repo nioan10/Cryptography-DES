@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import tkinter.messagebox as messagebox
+import os
 
 # Функция для перехода на главное меню
 def show_main_menu():
@@ -102,13 +103,17 @@ def set_data():
 
 
 
-# Функция для сохранения данных с проверками
+import os
+import tkinter.messagebox as messagebox
+
+# Функция для сохранения данных с проверками и выводом ошибок в виде всплывающих окон
 def save_data(text_entry, text_format, key_entry, key_format):
     text = text_entry.get()
     text_format_selected = text_format.get()
     key = key_entry.get()
     key_format_selected = key_format.get()
 
+    # Проверка текста
     if text_format_selected == "Бинарный":
         if len(text) != 64:
             messagebox.showerror("Ошибка", "Текст в бинарном формате должен содержать ровно 64 бита.")
@@ -122,17 +127,42 @@ def save_data(text_entry, text_format, key_entry, key_format):
             messagebox.showerror("Ошибка", "Текст должен содержать ровно 8 символов.")
             return
 
-    # Проверка ключа
-    if key_format_selected == "Бинарный":
-        if len(key) != 56:
-            messagebox.showerror("Ошибка", "Ключ должен содержать ровно 56 бит.")
-            return
-    elif key_format_selected == "Шестнадцатиричный":
-        if len(key) != 14:
-            messagebox.showerror("Ошибка", "Ключ должен содержать ровно 14 шестнадцатиричных символов.")
-            return
+    # Получаем путь к папке проекта
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка, где находится скрипт
+    project_files_folder = os.path.join(project_folder, "project_files")
 
-    # Если все проверки пройдены
+    # Создаем папку для файлов, если она не существует
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    # Если все проверки пройдены, сохраняем текст и ключ в файлы в папке проекта
+    try:
+        # Сохраняем текст в файл
+        text_filename = os.path.join(project_files_folder, "text_data.txt")
+        with open(text_filename, 'w') as file:
+            file.write(f"Формат текста: {text_format_selected}\n")
+            file.write(f"Данные текста: {text}\n")
+            messagebox.showinfo("Успех", f"Текст успешно записан/перезаписан в файл {text_filename}.")
+        
+        # Сохраняем ключ в файл
+        key_filename = os.path.join(project_files_folder, "key_data.txt")
+        with open(key_filename, 'w') as file:
+            file.write(f"Формат ключа: {key_format_selected}\n")
+            file.write(f"Данные ключа: {key}\n")
+            messagebox.showinfo("Успех", f"Ключ успешно записан/перезаписан в файл {key_filename}.")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Произошла ошибка при сохранении: {str(e)}")
+        return
+    
+    # Если все прошло успешно
+    print("Текст и ключ успешно сохранены.")
+    print(f"Текст: {text}")
+    print(f"Формат текста: {text_format_selected}")
+    print(f"Ключ: {key}")
+    print(f"Формат ключа: {key_format_selected}")
+
+
     print("Текст и ключ успешно сохранены.")
     print(f"Текст: {text}")
     print(f"Формат текста: {text_format_selected}")
