@@ -884,6 +884,7 @@ def set_data():
         # Кнопки для выбора действий
     ttk.Button(window, text="Обычные", command=lambda: [handle_regular_data(), window.destroy()]).pack(pady=5)
     ttk.Button(window, text="Шифрованные", command=lambda: [handle_encrypted_data(), window.destroy()]).pack(pady=5)
+    ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=5)
 
 # Функция для сохранения отредактированных зашифрованных данных
 def save_encrypted_dataset(encrypted_entry, key_entry, text_format, key_format):
