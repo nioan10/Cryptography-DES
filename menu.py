@@ -15,6 +15,7 @@ import avalanche
 import avalanche_all
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 ##########################################################################################################
 # 
@@ -438,8 +439,11 @@ def show_key_avalanche_analysis():
             print(new_key, len(new_key))
             new_key = coding.add_parity_bits(new_key)
             print(new_key, len(new_key))
+
             comparison_table, matr = avalanche_key.analyze_avalanche_effect_key(new_text, new_key, int(bit_position))
+  
             print("Результат анализа лавинного эффекта по ключу:\n", comparison_table)
+
             messagebox.showinfo("Результат", "Анализ лавинного эффекта по ключу выполнен. Проверьте консоль для деталей.")
             
             # Вычисляем параметры d1 и d3
@@ -555,18 +559,21 @@ def show_key_and_message_avalanche_analysis():
 # # Служебные функции
 ##########################################################################################################
 def show_graph(comparison_table):
-    rounds = comparison_table['Раунд']
-    total_diffs = comparison_table['Всего отличий']
+    # Суммируем отличия по блокам для каждого раунда
+    total_diffs = comparison_table.groupby('Раунд')['Всего отличий'].sum()
+
+    # Строим график
+    rounds = total_diffs.index  # Раунды (1-16)
+    total_diffs_values = total_diffs.values  # Значения отличий для каждого раунда
 
     plt.figure(figsize=(8, 6))
-    plt.plot(rounds, total_diffs, marker='o', linestyle='-', color='b')
+    plt.plot(rounds, total_diffs_values, marker='o', linestyle='-', color='b')
     plt.title('Лавинный эффект: Изменение количества битов по раундам')
     plt.xlabel('Раунд')
     plt.ylabel('Общее количество измененных битов')
     plt.grid(True)
-
-    # Отображаем график в отдельном окне
     plt.show()
+
 
 def calculate_d1_d3(comparison_table, len_text):
     # Получаем данные из таблицы
