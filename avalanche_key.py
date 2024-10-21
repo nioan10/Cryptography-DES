@@ -103,21 +103,3 @@ def analyze_avalanche_effect_key(text, key, bit_position):
     return total_comparison_df, total_a_ij_matrix
 
 
-
-
-
-
-# Пример использования
-text = "EXAMPLEEEXAMPLEE"  # Сообщение длиной 128 бит
-key = "KEY12345"         # Исходный ключ длиной 56 бит
-bit_position = 10        # Бит, который изменим в ключе (например, 10-й бит)
-
-
-text = coding.text_to_binary(text)
-key = coding.text_to_binary(key)
-# Выполняем анализ лавинного эффекта при изменении одного бита в ключе
-comparison_table = analyze_avalanche_effect_key(text, key, bit_position)
-print(comparison_table)
-# Выводим таблицу
-#print("Сравнение отличий битов на каждом раунде:")
-#print(comparison_table)
