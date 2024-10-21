@@ -41,7 +41,7 @@ def show_main_menu():
 def show_creators():
     creators_message = (
         "Создатели программы:\n\n"
-        "Разработка программы: [Данные удалены]\n"
+        "Разработка программы: Тузов Алексей [nioan7]\n"
         "Комплектация отчета: [Данные удалены]\n"
         "Помощь: [Данные удалены]\n"
         "Моральная поддержка: Завывающий ветер в 9 часов вечера\n\n"
@@ -64,8 +64,8 @@ def show_about():
         "2. Возможность задания текста и ключа в различных форматах (бинарный, шестнадцатиричный, обычный).\n"
         "3. Анализ лавинного эффекта для проверки устойчивости алгоритма к небольшим изменениям данных.\n\n"
         "Программа предоставляет простой и удобный графический интерфейс для работы с шифрованием.\n"
-        "Автор программы: [Данные удалены]\n"
-        "Версия: 0.999\n"
+        "Автор программы: Тузов Алексей [nioan7]\n"
+        "Версия: 1.001\n"
         "Дата создания: 2024"
     )
     
@@ -624,14 +624,26 @@ def text_to_hex(text):
 def binary_to_text(binary_data):
     return ''.join(chr(int(binary_data[i:i+8], 2)) for i in range(0, len(binary_data), 8))
 
-def hex_to_text(hex_data):
-    return ''.join(chr(int(hex_data[i:i+2], 16)) for i in range(0, len(hex_data), 2))
+def hex_to_text(hex_string):
+    # Убираем возможный префикс "0x", если он присутствует
+    hex_string = hex_string.replace("0x", "")
+    # Преобразуем шестнадцатиричную строку в байты
+    bytes_object = bytes.fromhex(hex_string)
+    # Преобразуем байты в строку
+    text_string = bytes_object.decode("utf-8")
+    return text_string
 
 def binary_to_hex(binary_data):
     return ''.join(format(int(binary_data[i:i+4], 2), 'x') for i in range(0, len(binary_data), 4)).upper()
 
-def hex_to_binary(hex_data):
-    return ''.join(format(int(c, 16), '04b') for c in hex_data)
+def hex_to_binary(hex_string):
+    # Убираем возможный префикс "0x", если он присутствует
+    hex_string = hex_string.replace("0x", "")
+    # Переводим шестнадцатиричную строку в целое число, а затем в двоичную строку
+    binary_string = bin(int(hex_string, 16))[2:]  # [2:] убирает "0b" префикс
+    # Добавляем ведущие нули, чтобы длина строки была кратна 4
+    padded_binary_string = binary_string.zfill(len(hex_string) * 4)
+    return padded_binary_string
 
 ##########################################################################################################
 # # Отображение данных
@@ -678,12 +690,12 @@ def show_current_data():
         # Конвертируем текст
         if text_format == "Бинарный":
             original_text = binary_to_text(text_data)
-            hex_text = hex(int(text_data, 2))[2:].upper()
+            hex_text = binary_to_hex(text_data)
             binary_text = text_data
         elif text_format == "Шестнадцатиричный":
             original_text = hex_to_text(text_data)
             hex_text = text_data
-            binary_text = bin(int(text_data, 16))[2:].zfill(64)
+            binary_text = hex_to_binary(text_data)
         else:
             original_text = text_data
             hex_text = text_to_hex(text_data)
@@ -1015,5 +1027,6 @@ style.configure("TLabel", font=("Helvetica", 12), background="#ADD8E6", foregrou
 style.configure("Small.TLabel", font=("Helvetica", 8), background="#ADD8E6", foreground="black")
 
 # Запуск приложения
+print(hex_to_text('52455055424C4943'))
 show_main_menu()
 root.mainloop()
