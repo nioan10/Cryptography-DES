@@ -241,6 +241,8 @@ def show_encrypt_decrypt():
         ttk.Label(root, text=f"Ключ (bin): {expanded_key}", style="Small.TLabel").pack(pady=5)
         ttk.Button(root, text="Назад", command=show_work_menu, style="TButton").pack(pady=10)
 
+        save_decrypted_data(decrypted_text)
+
 
     
 
@@ -285,6 +287,17 @@ def save_encrypted_data(encrypted_data):
         file.write("Формат: Бинарный\n")
         file.write(f"Данные: {encrypted_data}\n")
     messagebox.showinfo("Результат шифрования", f"Шифрованный файл записан в файл {encrypted_filename}")
+
+def save_decrypted_data(decrypted_text):
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
+    project_files_folder = os.path.join(project_folder, "project_files")  # Папка project_files
+    decrypted_filename = os.path.join(project_files_folder, "decrypted_text.txt")
+    
+    # Открываем файл и записываем дешифрованный текст
+    with open(decrypted_filename, 'w') as file:
+        file.write("Формат: Обычный\n")
+        file.write(f"Данные: {decrypted_text}\n")
+    messagebox.showinfo("Результат шифрования", f"Шифрованный файл записан в файл {decrypted_filename}")
 
 # Функция для сохранения расширенного ключа шифрования
 def save_expanded_key(expanded_key):
