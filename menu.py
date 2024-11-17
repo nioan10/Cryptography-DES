@@ -1002,6 +1002,10 @@ def save_data(text_entry, text_format, key_entry, key_format):
         return
 
 ##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
+##########################################################################################################
 # 
 # # 6 практическая
 #                   
@@ -1149,7 +1153,7 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
         with open(key_filename, 'w') as file:
             for i, key_hashed in enumerate(keys_hashed, start=1):
                 file.write(f"Формат ключа ({i}): Шестнадцатиричный\n")
-                file.write(f"Данные ключа ({i}): {key_hashed}\n\n")
+                file.write(f"Данные ключа ({i}): {key_hashed}\n")
         
         # Сохранение вектора инициализации
         iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
@@ -1213,8 +1217,14 @@ def show_ofb_menu():
     ttk.Button(root, text="Отобразить текущие данные", style="TButton", command=show_lab6_data).pack(pady=10)
     ttk.Button(root, text="Зашифровать", style="TButton", command=perform_ofb_encryption).pack(pady=10)
     ttk.Button(root, text="Расшифровать", style="TButton", command=perform_ofb_decryption).pack(pady=10)
-    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=perform_ofb_decryption).pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=analyze_ofb_avalanche).pack(pady=10)
     ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+##########################################################################################################
+# 
+# # Функция шифровки данных
+#                   
+##########################################################################################################
 
 def perform_ofb_encryption():
     """
@@ -1366,7 +1376,98 @@ def show_encryption_result(cipher_text):
     truncated_text = cipher_text[:512] + "..." if len(cipher_text) > 512 else cipher_text
     messagebox.showinfo("Результат шифрования", f"Зашифрованный текст (первые 512 символов):\n{truncated_text}")
 
-def perform_ofb_decryption(): return 0
+##########################################################################################################
+# 
+# # Функция дешифровки данных
+#                   
+##########################################################################################################
+
+def perform_ofb_decryption():
+    """
+    Выполняет дешифровку методом OFB.
+    1. Считывает вектор инициализации, ключ и зашифрованный текст из файлов.
+    2. Преобразует данные в бинарный вид в зависимости от формата.
+    3. Выполняет дешифровку методом OFB.
+    4. Отображает результат во всех представлениях (бинарный, обычный, шестнадцатиричный).
+    5. Сохраняет результат дешифровки в файл.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'r') as file:
+            iv_lines = file.readlines()
+            iv_format = iv_lines[0].strip().split(": ")[1]
+            iv_data = iv_lines[1].strip().split(": ")[1]
+
+        # Считывание ключа
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+            key_format = key_lines[0].strip().split(": ")[1]
+            key_data = key_lines[1].strip().split(": ")[1]
+
+        # Считывание зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "lab6_cipher_text.txt")
+        with open(cipher_filename, 'r') as file:
+            cipher_lines = file.readlines()
+            cipher_format = cipher_lines[0].strip().split(": ")[1]
+            cipher_data = cipher_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        iv_binary = convert_to_binary(iv_data, iv_format)
+        key_binary = convert_to_binary(key_data, key_format)
+        cipher_binary = convert_to_binary(cipher_data, cipher_format)
+
+        # Выполнение дешифровки (в OFB дешифровка аналогична шифрованию)
+        decrypted_binary = des_ofb_encryption(cipher_binary, iv_binary, key_binary)
+
+        # Убираем padding и преобразуем данные в разные представления
+        decrypted_binary_no_padding = remove_padding(decrypted_binary)
+        decrypted_text = binary_to_text(decrypted_binary_no_padding)
+        decrypted_hex = binary_to_hex(decrypted_binary_no_padding)
+
+        # Сохранение результата в файл
+        save_decryption_result(decrypted_binary, decrypted_text, decrypted_hex)
+
+        # Отображение результата в окне
+        messagebox.showinfo(
+            "Результат дешифровки",
+            f"Текст (Бинарный): {decrypted_binary_no_padding}\n\n"
+            f"Текст (Обычный): {decrypted_text}\n\n"
+            f"Текст (Шестнадцатиричный): {decrypted_hex}"
+        )
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при дешифровке: {str(e)}")
+
+def save_decryption_result(binary, text, hex_text):
+    """
+    Сохраняет результат дешифровки в файл.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение результата дешифровки
+        decrypted_filename = os.path.join(project_files_folder, "lab6_decrypted_text.txt")
+        with open(decrypted_filename, 'w') as file:
+            file.write("Формат текста: Обычный\n")
+            file.write(f"Данные текста: {text}\n\n")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
 ##########################################################################################################
 # 
 # # Функция отображения данных
@@ -1436,6 +1537,364 @@ def show_lab6_data():
         messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
     except Exception as e:
         messagebox.showerror("Ошибка", f"Ошибка при отображении данных: {str(e)}")
+
+##########################################################################################################
+# 
+# # Анализ лавинного эффекта
+#                   
+##########################################################################################################
+
+def analyze_ofb_avalanche(): return 0
+
+
+
+##########################################################################################################
+# 
+# # Кратное шифрования с тремя ключами
+#                   
+##########################################################################################################
+def show_triple_key_menu():
+    """
+    Меню для работы с кратным шифрованием с тремя ключами.
+    """
+    clear_screen()
+
+    # Заголовок меню
+    ttk.Label(root, text="Кратное шифрование с тремя ключами", style="TLabel").pack(pady=10)
+
+    ttk.Button(root, text="Просмотр текущих данных", style="TButton", command=show_lab6_data).pack(pady=10)
+    ttk.Button(root, text="Шифрование", style="TButton", command=perform_triple_key_encryption).pack(pady=10)
+    ttk.Button(root, text="Дешифровка", style="TButton", command=perform_triple_key_decryption).pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=analyze_triple_key_avalanche).pack(pady=10)
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+##########################################################################################################
+# 
+# # Шифрование с тремя ключами
+#                   
+##########################################################################################################
+def perform_triple_key_encryption():
+    """
+    Выполняет кратное шифрование с тремя ключами.
+    1. Считывает данные из файлов.
+    2. Преобразует их в бинарный вид.
+    3. Выполняет шифрование с помощью трех ключей.
+    4. Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
+    5. Отображает результат через messagebox.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+
+        # Считываем формат и данные для каждого ключа
+        keys = []
+        for i in range(3):
+            key_format = key_lines[i * 2].strip().split(": ")[1]
+            key_data = key_lines[i * 2 + 1].strip().split(": ")[1]
+            keys.append((key_data, key_format))
+
+        # Считывание текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'r') as file:
+            text_lines = file.readlines()
+            if len(text_lines) < 2:
+                raise ValueError("Файл текста имеет некорректный формат или недостаточное количество данных (ожидается 2 строки).")
+            text_format = text_lines[0].strip().split(": ")[1]
+            text_data = text_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        key1_binary = convert_to_binary(keys[0][0], keys[0][1])
+        key2_binary = convert_to_binary(keys[1][0], keys[1][1])
+        key3_binary = convert_to_binary(keys[2][0], keys[2][1])
+        text_binary = convert_to_binary(text_data, text_format)
+        # Выполнение шифрования
+        cipher_text = triple_key_encryption(text_binary, key1_binary, key2_binary, key3_binary)
+
+        # Добавляем биты четности к каждому ключу
+        extended_key1 = coding.add_parity_bits(key1_binary)
+        extended_key2 = coding.add_parity_bits(key2_binary)
+        extended_key3 = coding.add_parity_bits(key3_binary)
+
+        # Сохранение результата в файлы
+        save_triple_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3)
+
+        # Отображение результата
+        show_triple_encryption_result(cipher_text)
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
+
+def save_triple_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3):
+    """
+    Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param extended_key1: Расширенный ключ 1 в бинарном формате.
+    :param extended_key2: Расширенный ключ 2 в бинарном формате.
+    :param extended_key3: Расширенный ключ 3 в бинарном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "triple_cipher_text.txt")
+        with open(cipher_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {cipher_text}\n")
+
+        # Сохранение расширенных ключей
+        key_filename = os.path.join(project_files_folder, "triple_extended_keys.txt")
+        with open(key_filename, 'w') as file:
+            file.write("Формат ключа: Бинарный\n")
+            file.write(f"Ключ 1: {extended_key1}\n")
+            file.write(f"Ключ 2: {extended_key2}\n")
+            file.write(f"Ключ 3: {extended_key3}\n")
+
+        messagebox.showinfo("Успех", "Результаты шифрования успешно сохранены!")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def save_triple_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3):
+    """
+    Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param extended_key1: Расширенный ключ 1 в бинарном формате.
+    :param extended_key2: Расширенный ключ 2 в бинарном формате.
+    :param extended_key3: Расширенный ключ 3 в бинарном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "triple_cipher_text.txt")
+        with open(cipher_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {cipher_text}\n")
+
+        # Сохранение расширенных ключей
+        key_filename = os.path.join(project_files_folder, "triple_extended_keys.txt")
+        with open(key_filename, 'w') as file:
+            file.write("Формат ключа: Бинарный\n")
+            file.write(f"Ключ 1: {extended_key1}\n")
+            file.write(f"Ключ 2: {extended_key2}\n")
+            file.write(f"Ключ 3: {extended_key3}\n")
+
+        messagebox.showinfo("Успех", "Результаты шифрования успешно сохранены!")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def show_triple_encryption_result(cipher_text):
+    """
+    Отображает результат шифрования через messagebox.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    """
+    # Показываем первые 512 символов, чтобы избежать переполнения окна
+    truncated_text = cipher_text[:512] + "..." if len(cipher_text) > 512 else cipher_text
+    messagebox.showinfo("Результат шифрования", f"Зашифрованный текст (первые 512 символов):\n{truncated_text}")
+
+def triple_key_encryption(binary_text, key1, key2, key3):
+    """
+    Выполняет кратное шифрование с тремя ключами.
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param key1: Ключ 1 в бинарном формате (56 бит).
+    :param key2: Ключ 2 в бинарном формате (56 бит).
+    :param key3: Ключ 3 в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка длины ключей
+    if len(key1) != 56 or len(key2) != 56 or len(key3) != 56:
+        raise ValueError("Каждый ключ должен быть длиной 56 бит.")
+
+    # Добавляем биты четности к каждому ключу
+    extended_key1 = coding.add_parity_bits(key1)
+    extended_key2 = coding.add_parity_bits(key2)
+    extended_key3 = coding.add_parity_bits(key3)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    cipher_text = ""
+
+    # Тройное шифрование для каждого блока
+    for block in blocks:
+        # Первый этап: шифрование с ключом 1
+        encrypted_block1 = coding.encrypt(block, extended_key1)
+        # Второй этап: шифрование с ключом 2
+        encrypted_block2 = coding.encrypt(encrypted_block1, extended_key2)
+        # Третий этап: шифрование с ключом 3
+        encrypted_block3 = coding.encrypt(encrypted_block2, extended_key3)
+        cipher_text += encrypted_block3
+
+    return cipher_text
+
+##########################################################################################################
+# 
+# # Дешифрование с тремя ключами
+#                   
+##########################################################################################################
+
+def perform_triple_key_decryption():
+    """
+    Выполняет кратное дешифрование с тремя ключами.
+    1. Считывает данные из файлов.
+    2. Преобразует их в бинарный вид.
+    3. Выполняет дешифрование.
+    4. Удаляет padding.
+    5. Сохраняет результат в файл и выводит через messagebox.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+
+        # Проверяем, чтобы ключи имели ожидаемый формат (6 строк)
+        if len(key_lines) < 6:
+            raise ValueError("Файл ключей имеет некорректный формат или недостаточное количество данных (ожидается 6 строк).")
+
+        # Считываем формат и данные для каждого ключа
+        keys = []
+        for i in range(3):
+            key_format = key_lines[i * 2].strip().split(": ")[1]
+            key_data = key_lines[i * 2 + 1].strip().split(": ")[1]
+            keys.append((key_data, key_format))
+
+        # Считывание текста
+        cipher_filename = os.path.join(project_files_folder, "triple_cipher_text.txt")
+        with open(cipher_filename, 'r') as file:
+            cipher_lines = file.readlines()
+            if len(cipher_lines) < 2:
+                raise ValueError("Файл зашифрованного текста имеет некорректный формат или недостаточное количество данных (ожидается 2 строки).")
+            cipher_format = cipher_lines[0].strip().split(": ")[1]
+            cipher_data = cipher_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        key1_binary = convert_to_binary(keys[0][0], keys[0][1])
+        key2_binary = convert_to_binary(keys[1][0], keys[1][1])
+        key3_binary = convert_to_binary(keys[2][0], keys[2][1])
+        cipher_binary = convert_to_binary(cipher_data, cipher_format)
+
+        # Выполнение дешифрования
+        decrypted_binary = triple_key_decryption(cipher_binary, key1_binary, key2_binary, key3_binary)
+
+        # Удаление padding
+        decrypted_binary_no_padding = remove_padding(decrypted_binary)
+        decrypted_text = binary_to_text(decrypted_binary_no_padding)
+        decrypted_hex = binary_to_hex(decrypted_binary_no_padding)
+
+        # Сохранение результата в файлы
+        save_triple_decryption_results(decrypted_binary_no_padding, decrypted_text, decrypted_hex)
+
+        # Отображение результата
+        show_triple_decryption_result(decrypted_binary_no_padding, decrypted_text, decrypted_hex)
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except ValueError as e:
+        messagebox.showerror("Ошибка", str(e))
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при дешифровании: {str(e)}")
+
+def triple_key_decryption(cipher_text, key1, key2, key3):
+    """
+    Выполняет кратное дешифрование с тремя ключами.
+    :param cipher_text: Зашифрованный текст в бинарном формате (строка из 0 и 1).
+    :param key1: Ключ 1 в бинарном формате (56 бит).
+    :param key2: Ключ 2 в бинарном формате (56 бит).
+    :param key3: Ключ 3 в бинарном формате (56 бит).
+    :return: Дешифрованный текст в бинарном формате.
+    """
+    # Проверка длины ключей
+    if len(key1) != 56 or len(key2) != 56 or len(key3) != 56:
+        raise ValueError("Каждый ключ должен быть длиной 56 бит.")
+
+    # Добавляем биты четности к каждому ключу
+    extended_key1 = coding.add_parity_bits(key1)
+    extended_key2 = coding.add_parity_bits(key2)
+    extended_key3 = coding.add_parity_bits(key3)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [cipher_text[i:i + 64] for i in range(0, len(cipher_text), 64)]
+    plain_text = ""
+
+    # Тройное дешифрование для каждого блока
+    for block in blocks:
+        # Первый этап: дешифрование с ключом 3
+        decrypted_block1 = coding.decrypt(block, extended_key3)
+        # Второй этап: дешифрование с ключом 2
+        decrypted_block2 = coding.decrypt(decrypted_block1, extended_key2)
+        # Третий этап: дешифрование с ключом 1
+        decrypted_block3 = coding.decrypt(decrypted_block2, extended_key1)
+        plain_text += decrypted_block3
+
+    return plain_text
+
+def save_triple_decryption_results(binary, text, hex_text):
+    """
+    Сохраняет результат дешифрования в файл.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение результата дешифрования
+        decrypted_filename = os.path.join(project_files_folder, "triple_decrypted_text.txt")
+        with open(decrypted_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {binary}\n\n")
+            file.write("Формат текста: Обычный\n")
+            file.write(f"Данные текста: {text}\n\n")
+            file.write("Формат текста: Шестнадцатиричный\n")
+            file.write(f"Данные текста: {hex_text}\n")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def show_triple_decryption_result(binary, text, hex_text):
+    """
+    Отображает результат дешифрования через messagebox.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    messagebox.showinfo(
+        "Результат дешифрования",
+        f"Текст (Бинарный): {binary}\n\n"
+        f"Текст (Обычный): {text}\n\n"
+        f"Текст (Шестнадцатиричный): {hex_text}"
+    )
+
+##########################################################################################################
+# 
+# # Анализ лавинного эффекта с тремя ключами
+#                   
+##########################################################################################################
+
+def analyze_triple_key_avalanche(): return 0
 
 ##########################################################################################################
 # 
