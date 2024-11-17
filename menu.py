@@ -1841,6 +1841,7 @@ def show_triple_key_menu():
 # # Шифрование с тремя ключами
 #                   
 ##########################################################################################################
+
 def perform_triple_key_encryption():
     """
     Выполняет кратное шифрование с тремя ключами.
@@ -1898,40 +1899,6 @@ def perform_triple_key_encryption():
         messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
     except Exception as e:
         messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
-
-def save_triple_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3):
-    """
-    Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
-    :param cipher_text: Зашифрованный текст в бинарном формате.
-    :param extended_key1: Расширенный ключ 1 в бинарном формате.
-    :param extended_key2: Расширенный ключ 2 в бинарном формате.
-    :param extended_key3: Расширенный ключ 3 в бинарном формате.
-    """
-    project_folder = os.path.dirname(os.path.abspath(__file__))
-    project_files_folder = os.path.join(project_folder, "lab6_files")
-
-    if not os.path.exists(project_files_folder):
-        os.makedirs(project_files_folder)
-
-    try:
-        # Сохранение зашифрованного текста
-        cipher_filename = os.path.join(project_files_folder, "triple_cipher_text.txt")
-        with open(cipher_filename, 'w') as file:
-            file.write("Формат текста: Бинарный\n")
-            file.write(f"Данные текста: {cipher_text}\n")
-
-        # Сохранение расширенных ключей
-        key_filename = os.path.join(project_files_folder, "triple_extended_keys.txt")
-        with open(key_filename, 'w') as file:
-            file.write("Формат ключа: Бинарный\n")
-            file.write(f"Ключ 1: {extended_key1}\n")
-            file.write(f"Ключ 2: {extended_key2}\n")
-            file.write(f"Ключ 3: {extended_key3}\n")
-
-        messagebox.showinfo("Успех", "Результаты шифрования успешно сохранены!")
-
-    except Exception as e:
-        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
 
 def save_triple_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3):
     """
@@ -2162,7 +2129,154 @@ def show_triple_decryption_result(binary, text, hex_text):
 #                   
 ##########################################################################################################
 
-def analyze_triple_key_avalanche(): return 0
+def analyze_triple_key_avalanche():
+    clear_screen()
+
+    # Заголовок
+    ttk.Label(root, text="Анализ лавинного эффекта", style="TLabel").pack(pady=10)
+
+    # Поле ввода для текста
+    ttk.Label(root, text="Введите текст (1 блок):", style="TLabel").pack(pady=5)
+    text_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    text_format.pack(pady=5)
+    text_format.current(0)  # По умолчанию обычный текст
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.insert(0, "REPUBLIC")  # Пресетное значение
+    text_entry.pack(pady=5)
+
+    # Поле ввода для ключа с выбором формата
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key_format.pack(pady=5)
+    key_format.current(1)  # По умолчанию шестнадцатиричный
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.insert(0, "A1B2C3D4E5F678")  # Пресетное значение (16-ричный)
+    key_entry.pack(pady=5)
+
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key2_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key2_format.pack(pady=5)
+    key2_format.current(1)  # По умолчанию шестнадцатиричный
+    key2_entry = ttk.Entry(root, width=100)
+    key2_entry.insert(0, "FEDCBA98765432")  # Пресетное значение (16-ричный)
+    key2_entry.pack(pady=5)
+
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key3_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key3_format.pack(pady=5)
+    key3_format.current(1)  # По умолчанию шестнадцатиричный
+    key3_entry = ttk.Entry(root, width=100)
+    key3_entry.insert(0, "1234567890ABCD")  # Пресетное значение (16-ричный)
+    key3_entry.pack(pady=5)
+
+    text = text_entry.get()
+    key1 = key_entry.get()
+    key2 = key2_entry.get()
+    key3 = key3_entry.get()
+
+    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: triple_analyze_text_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 1ом ключе", style="TButton", command=lambda: triple_analyze_key1_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 2ом ключе", style="TButton", command=lambda: triple_analyze_key2_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 3ем ключе", style="TButton", command=lambda: triple_analyze_key3_bit_change(text, key1, key2, key3)).pack(padx=5)
+
+    # Кнопка назад
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+def triple_analyze_text_bit_change(text, key1, key2, key3): 
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = triple_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (64):
+        new_text = flip_bit(text,i)
+        new_cipher = triple_key_encryption(new_text, key1, key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (64):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def triple_analyze_key1_bit_change(text, key1, key2, key3): 
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = triple_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key1 = flip_bit(key1 ,i)
+        new_cipher = triple_key_encryption(text, new_key1, key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def triple_analyze_key2_bit_change(text, key1, key2, key3):
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = triple_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key2 = flip_bit(key2, i)
+        new_cipher = triple_key_encryption(text, key1, new_key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def triple_analyze_key3_bit_change(text, key1, key2, key3):
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = triple_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key3 = flip_bit(key3, i)
+        new_cipher = triple_key_encryption(text, key1, key2, new_key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)    
+
+def plot_single_graph(y, title="График изменения битов", x_label="Изменяемый бит", y_label="Количество изменённых битов"):
+    # Создаем массив значений для оси X
+    x = range(len(y))  # Значения X от 0 до длины массива Y
+    
+    # Построение графика
+    plt.figure(figsize=(10, 5))
+    plt.plot(x, y, label="Изменённые биты", color="blue", marker="o", linestyle="-")
+
+    # Настройка графика
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.grid(True, linestyle="--", alpha=0.7)
+    plt.legend()
+    plt.tight_layout()
+
+    # Показ графика
+    plt.show()
+
 
 ##########################################################################################################
 # 
