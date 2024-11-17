@@ -782,7 +782,6 @@ def show_current_data():
     note = ("Примечание: Данные могут не совпадать, если они были изменены.")
     ttk.Label(root, text=note, style="Small.TLabel", anchor="center").pack(side="bottom", pady=20)
 
-
 ##########################################################################################################
 # # Раздел задачи данных
 # #         В данном разделе предусмотрены функции задачи данных для шифрования блока текста алгоритмом DES
@@ -1014,11 +1013,10 @@ def show_lab6_menu():
 
     # Кнопки для указанных вариантов
     ttk.Button(root, text="Задать данные", command=set_lab6_data, style="TButton").pack(pady=10)
-    ttk.Button(root, text="Отредактировать данные", command=edit_lab6_data, style="TButton").pack(pady=10)
-    ttk.Button(root, text="Шифрование", command=encrypt_lab6_data, style="TButton").pack(pady=10)
-    ttk.Button(root, text="Дешифровка", command=decrypt_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Режим шифрования OFB", command=show_ofb_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Кратное шифрование тремя ключами", command=show_triple_key_menu, style="TButton").pack(pady=10)
+    
     ttk.Button(root, text="Отобразить данные", command=show_lab6_data, style="TButton").pack(pady=10)
-    ttk.Button(root, text="Анализ лавинного эффекта на трёх блоках текста", command=analyze_lab6_avalanche, style="TButton").pack(pady=10)
     
     # Кнопка возврата в главное меню
     ttk.Button(root, text="Назад", command=show_main_menu, style="TButton").pack(pady=10)
@@ -1028,7 +1026,6 @@ def show_lab6_menu():
 # # Задача данных
 #                   
 ##########################################################################################################
-import hashlib
 
 def set_lab6_data():
     clear_screen()
@@ -1062,8 +1059,18 @@ def set_lab6_data():
         key_entry.pack(pady=5)
         key_entries.append(key_entry)
 
+    # Поле ввода вектора инициализации
+    ttk.Label(root, text="Выберите формат вектора инициализации:", style="TLabel").pack(pady=5)
+    iv_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    iv_format.pack(pady=5)
+    iv_format.current(0)
+
+    ttk.Label(root, text="Введите вектор инициализации (IV):", style="TLabel").pack(pady=5)
+    iv_entry = ttk.Entry(root, width=100)
+    iv_entry.pack(pady=5)
+
     # Кнопка для сохранения данных
-    ttk.Button(root, text="Сохранить данные", style="TButton", command=lambda: save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats)).pack(pady=10)
+    ttk.Button(root, text="Сохранить данные", style="TButton", command=lambda: save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, iv_entry, iv_format)).pack(pady=10)
 
     # Кнопка для возврата к меню Лабораторной 6
     ttk.Button(root, text="Назад", command=show_lab6_menu, style="TButton").pack(pady=10)
@@ -1075,10 +1082,11 @@ def set_lab6_data():
     )
     ttk.Label(root, text=note, style="Small.TLabel", wraplength=700).pack(side="bottom", pady=20)
 
-
-def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats):
+def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, iv_entry, iv_format):
     text = text_entry.get()
     text_format_selected = text_format.get()
+    iv = iv_entry.get()
+    iv_format_selected = iv_format.get()
 
     # Преобразование и дополнение текста
     try:
@@ -1108,6 +1116,19 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats):
         key_hashed = hashlib.sha256(key_hex.encode()).hexdigest()[:14].upper()
         keys_hashed.append(key_hashed)
 
+        # Преобразование вектора инициализации в 16-ричный формат и обрезка до 16 байт
+    if iv_format_selected == "Обычный":
+        iv_hex = ''.join(format(ord(c), '02x') for c in iv).upper()
+    elif iv_format_selected == "Бинарный":
+        iv_hex = ''.join(format(int(iv[j:j+4], 2), 'x') for j in range(0, len(iv), 4)).upper()
+    elif iv_format_selected == "Шестнадцатиричный":
+        iv_hex = iv.upper()
+    else:
+        messagebox.showerror("Ошибка", "Неверный формат вектора инициализации.")
+        return
+
+    iv_trimmed = iv_hex[:16] 
+
     # Сохранение данных
     project_folder = os.path.dirname(os.path.abspath(__file__))
     project_files_folder = os.path.join(project_folder, "lab6_files")
@@ -1129,6 +1150,12 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats):
             for i, key_hashed in enumerate(keys_hashed, start=1):
                 file.write(f"Формат ключа ({i}): Шестнадцатиричный\n")
                 file.write(f"Данные ключа ({i}): {key_hashed}\n\n")
+        
+        # Сохранение вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'w') as file:
+            file.write(f"Формат вектора инициализации: Шестнадцатиричный\n")
+            file.write(f"Данные вектора инициализации: {iv_trimmed}\n")
 
         messagebox.showinfo("Успех", "Данные успешно сохранены!")
     except Exception as e:
@@ -1172,22 +1199,243 @@ def pad_to_64_bits(input_text, text_format):
         binary_text += padding
 
     return binary_text
- 
-def edit_lab6_data():
-    messagebox.showinfo("Отредактировать данные", "Функция 'Отредактировать данные' для Лабораторной 6.")
-    
-def encrypt_lab6_data():
-    messagebox.showinfo("Шифрование", "Функция 'Шифрование' для Лабораторной 6.")
-    
-def decrypt_lab6_data():
-    messagebox.showinfo("Дешифровка", "Функция 'Дешифровка' для Лабораторной 6.")
-    
-def show_lab6_data():
-    messagebox.showinfo("Отобразить данные", "Функция 'Отобразить данные' для Лабораторной 6.")
-    
-def analyze_lab6_avalanche():
-    messagebox.showinfo("Анализ лавинного эффекта", "Функция 'Анализ лавинного эффекта' для Лабораторной 6.")
 
+##########################################################################################################
+# 
+# # Функция для режима OFB
+#                   
+##########################################################################################################
+def show_ofb_menu():
+    clear_screen()
+
+    # Заголовок меню
+    ttk.Label(root, text="Режим шифрования OFB", style="TLabel").pack(pady=10)
+    ttk.Button(root, text="Отобразить текущие данные", style="TButton", command=show_lab6_data).pack(pady=10)
+    ttk.Button(root, text="Зашифровать", style="TButton", command=perform_ofb_encryption).pack(pady=10)
+    ttk.Button(root, text="Расшифровать", style="TButton", command=perform_ofb_decryption).pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=perform_ofb_decryption).pack(pady=10)
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+def perform_ofb_encryption():
+    """
+    Выполняет шифрование методом OFB.
+    1. Считывает вектор инициализации, ключ и текст из файлов.
+    2. Преобразует данные в бинарный вид в зависимости от формата.
+    3. Выполняет шифрование методом OFB.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'r') as file:
+            iv_lines = file.readlines()
+            iv_format = iv_lines[0].strip().split(": ")[1]
+            iv_data = iv_lines[1].strip().split(": ")[1]
+
+        # Считывание ключа
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+            key_format = key_lines[0].strip().split(": ")[1]
+            key_data = key_lines[1].strip().split(": ")[1]
+
+        # Считывание текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'r') as file:
+            text_lines = file.readlines()
+            text_format = text_lines[0].strip().split(": ")[1]
+            text_data = text_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        iv_binary = convert_to_binary(iv_data, iv_format)
+        key_binary = convert_to_binary(key_data, key_format)
+        text_binary = convert_to_binary(text_data, text_format)
+
+        # Выполнение шифрования
+        cipher_text = des_ofb_encryption(text_binary, iv_binary, key_binary)
+
+        # Отображение результата шифрования
+        show_encryption_result(cipher_text)
+
+        messagebox.showinfo("Успех", "Шифрование выполнено успешно. Результаты сохранены в файлы.")
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
+
+def convert_to_binary(data, data_format):
+    """
+    Преобразует данные в бинарный вид в зависимости от их формата.
+    :param data: Исходные данные.
+    :param data_format: Формат данных ("Обычный", "Шестнадцатиричный", "Бинарный").
+    :return: Данные в бинарном формате.
+    """
+    if data_format == "Бинарный":
+        return data
+    elif data_format == "Обычный":
+        return ''.join(format(ord(char), '08b') for char in data)
+    elif data_format == "Шестнадцатиричный":
+        return ''.join(format(int(data[i:i+2], 16), '08b') for i in range(0, len(data), 2))
+    else:
+        raise ValueError(f"Неизвестный формат данных: {data_format}")
+
+def des_ofb_encryption(binary_text, iv, key):
+    """
+    Выполняет шифрование текста методом OFB с использованием DES.
+
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param iv: Вектор инициализации в бинарном формате (64 бита).
+    :param key: Ключ в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка входных данных
+    if len(iv) != 64:
+        raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
+    if len(key) != 56:
+        raise ValueError("Ключ должен быть длиной 56 бит.")
+    if len(binary_text) % 64 != 0:
+        raise ValueError("Текст должен быть кратен 64 битам.")
+
+    # Добавляем биты четности к ключу
+    extended_key = coding.add_parity_bits(key)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+
+    # Шифрование методом OFB
+    cipher_text = ""
+    current_iv = iv
+    for block in blocks:
+        # Генерация псевдослучайного блока (шифрование текущего IV)
+        encrypted_iv = coding.encrypt(current_iv, extended_key)
+
+        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        encrypted_block = ''.join(
+            '1' if bit_text != bit_iv else '0'
+            for bit_text, bit_iv in zip(block, encrypted_iv)
+        )
+        cipher_text += encrypted_block
+
+        # Обновление IV для следующего блока
+        current_iv = encrypted_iv
+
+    # Сохранение результата в файл
+    save_encrypted_data_OFB(cipher_text, extended_key)
+
+    return cipher_text
+
+def save_encrypted_data_OFB(cipher_text, extended_key):
+    """
+    Сохраняет зашифрованный текст и расширенный ключ в файл в установленном формате.
+
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param extended_key: Расширенный ключ в бинарном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "lab6_cipher_text.txt")
+        with open(cipher_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {cipher_text}\n")
+
+        # Сохранение расширенного ключа
+        key_filename = os.path.join(project_files_folder, "lab6_extended_key.txt")
+        with open(key_filename, 'w') as file:
+            file.write("Формат ключа: Бинарный\n")
+            file.write(f"Данные ключа: {extended_key}\n")
+
+        messagebox.showinfo("Успех", "Результат шифрования успешно сохранен!")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def show_encryption_result(cipher_text):
+    """
+    Отображает результат шифрования в messagebox.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    """
+    # Показываем первые 512 символов, чтобы избежать переполнения окна
+    truncated_text = cipher_text[:512] + "..." if len(cipher_text) > 512 else cipher_text
+    messagebox.showinfo("Результат шифрования", f"Зашифрованный текст (первые 512 символов):\n{truncated_text}")
+
+def perform_ofb_decryption(): return 0
+##########################################################################################################
+# 
+# # Функция отображения данных
+#                   
+##########################################################################################################
+def remove_padding(binary_text):
+    """
+    Удаляет padding из текста в бинарном формате.
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :return: Текст без padding.
+    """
+    if len(binary_text) % 8 != 0:
+        raise ValueError("Длина бинарного текста не кратна 8 битам.")
+
+    # Последний байт определяет количество байтов дополнения
+    padding_size = int(binary_text[-8:], 2)
+    if padding_size < 1 or padding_size > 8:
+        raise ValueError("Неверный padding в тексте.")
+
+    # Убираем padding
+    return binary_text[:-padding_size * 8]
+
+def show_lab6_data():
+    """
+    Отображает данные из файлов, убирает padding для текста и выводит данные во всех представлениях.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Чтение текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'r') as file:
+            lines = file.readlines()
+            text_format = lines[0].strip().split(": ")[1]
+            binary_text = lines[1].strip().split(": ")[1]
+
+        # Убираем padding из текста
+        binary_text_no_padding = remove_padding(binary_text)
+
+        # Преобразуем текст в разные представления
+        text = binary_to_text(binary_text_no_padding)
+        hex_text = binary_to_hex(binary_text_no_padding)
+
+        # Чтение ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            keys = file.read()
+
+        # Чтение вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'r') as file:
+            iv = file.read()
+
+        # Вывод данных в сообщение
+        messagebox.showinfo(
+            "Текущие данные",
+            f"Текст (Бинарный): {binary_text}\n"
+            f"Текст (Без padding): {binary_text_no_padding}\n"
+            f"Текст (Обычный): {text}\n"
+            f"Текст (Шестнадцатиричный): {hex_text}\n\n"
+            f"Ключи (2 и 3 ключи используются только в задании кратного шифрования):\n{keys}\n\n"
+            f"Вектор инициализации:\n{iv}"
+        )
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при отображении данных: {str(e)}")
 
 ##########################################################################################################
 # 
@@ -1202,7 +1450,7 @@ def clear_screen():
 # Основное окно
 root = tk.Tk()
 root.title("Программа анализа и шифрования по алгоритму DES")
-root.geometry("800x700")
+root.geometry("900x800")
 root.configure(bg="#ADD8E6")  # Устанавливаем темный фон
 
 # Настройка темной темы с использованием ttk стилей
