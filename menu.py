@@ -363,7 +363,7 @@ def show_message_avalanche_analysis():
     text_entry.pack(pady=5)
 
     # Поле для ввода ключа
-    ttk.Label(root, text="Введите ключ для анализа (ровно 7 символов):", style="TLabel").pack(pady=5)
+    ttk.Label(root, text="Введите ключ для анализа:", style="TLabel").pack(pady=5)
     key_entry = ttk.Entry(root, width=100)
     key_entry.pack(pady=5)
 
@@ -382,9 +382,10 @@ def show_message_avalanche_analysis():
             messagebox.showerror("Ошибка", "Текст должен быть кратен 8 символам (64 бита).")
             return
         print(key,len(key))
-        if len(key) != 7:
-            messagebox.showerror("Ошибка", "Ключ должен быть длиной ровно 7 символов (56 бит).")
-            return
+        # Преобразование ключа в хэш
+        full_hashed_key = hashlib.sha256(key.encode()).hexdigest()  # Полный хэш в 16-ричном формате
+        # Обрезка хэша до первых 7 символов
+        key = full_hashed_key[:7]
         if not bit_position.isdigit() or not (0 <= int(bit_position) < len(text) * 8):
             messagebox.showerror("Ошибка", "Позиция изменяемого бита должна быть числом в пределах текста.")
             return
