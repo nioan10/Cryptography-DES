@@ -27,8 +27,8 @@ def show_main_menu():
     clear_screen()
     
     ttk.Label(root, text="Главное меню", style="TLabel").pack(pady=60)
-    ttk.Button(root, text="Перейти к работе", command=show_work_menu, style="TButton").pack(pady=10)
-    
+    ttk.Button(root, text="Лабораторная 5", command=show_work_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Лабораторная 6", command=show_lab6_menu, style="TButton").pack(pady=10)
     ttk.Button(root, text="Создатели", command=show_creators, style="TButton").pack(pady=10)
     ttk.Button(root, text="О программе", command=show_about, style="TButton").pack(pady=10)
     ttk.Button(root, text="Выход", command=root.quit, style="TButton").pack(pady=10)
@@ -1001,6 +1001,192 @@ def save_data(text_entry, text_format, key_entry, key_format):
     except Exception as e:
         messagebox.showerror("Ошибка", f"Произошла ошибка при сохранении: {str(e)}")
         return
+
+##########################################################################################################
+# 
+# # 6 практическая
+#                   
+##########################################################################################################
+def show_lab6_menu():
+    clear_screen()
+    
+    ttk.Label(root, text="Лабораторная работа 6", style="TLabel").pack(pady=20)
+
+    # Кнопки для указанных вариантов
+    ttk.Button(root, text="Задать данные", command=set_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Отредактировать данные", command=edit_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Шифрование", command=encrypt_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Дешифровка", command=decrypt_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Отобразить данные", command=show_lab6_data, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта на трёх блоках текста", command=analyze_lab6_avalanche, style="TButton").pack(pady=10)
+    
+    # Кнопка возврата в главное меню
+    ttk.Button(root, text="Назад", command=show_main_menu, style="TButton").pack(pady=10)
+
+##########################################################################################################
+# 
+# # Задача данных
+#                   
+##########################################################################################################
+import hashlib
+
+def set_lab6_data():
+    clear_screen()
+
+    # Заголовок окна
+    ttk.Label(root, text="Задать данные для Лабораторной 6", style="TLabel").pack(pady=10)
+
+    # Выпадающий список для формата текста
+    ttk.Label(root, text="Выберите формат текста:", style="TLabel").pack(pady=5)
+    text_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    text_format.pack(pady=5)
+    text_format.current(0)  # По умолчанию "Обычный"
+
+    # Поле ввода текста
+    ttk.Label(root, text="Введите текст:", style="TLabel").pack(pady=5)
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.pack(pady=5)
+
+    # Поля для трех ключей
+    key_entries = []
+    key_formats = []
+    for i in range(3):
+        ttk.Label(root, text=f"Выберите формат ключа {i + 1}:", style="TLabel").pack(pady=5)
+        key_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+        key_format.pack(pady=5)
+        key_format.current(0)  # По умолчанию "Обычный"
+        key_formats.append(key_format)
+
+        ttk.Label(root, text=f"Введите ключ {i + 1}:", style="TLabel").pack(pady=5)
+        key_entry = ttk.Entry(root, width=100)
+        key_entry.pack(pady=5)
+        key_entries.append(key_entry)
+
+    # Кнопка для сохранения данных
+    ttk.Button(root, text="Сохранить данные", style="TButton", command=lambda: save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats)).pack(pady=10)
+
+    # Кнопка для возврата к меню Лабораторной 6
+    ttk.Button(root, text="Назад", command=show_lab6_menu, style="TButton").pack(pady=10)
+
+    # Примечание для пользователя
+    note = (
+        "Примечание: Текст должен быть ровно 8 символов, 16 символов в шестнадцатиричном формате или 64 бита в бинарном формате.\n"
+        "Каждый ключ может быть задан в любом формате, но будет преобразован в шестнадцатиричный формат и хэширован."
+    )
+    ttk.Label(root, text=note, style="Small.TLabel", wraplength=700).pack(side="bottom", pady=20)
+
+
+def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats):
+    text = text_entry.get()
+    text_format_selected = text_format.get()
+
+    # Преобразование и дополнение текста
+    try:
+        padded_text = pad_to_64_bits(text, text_format_selected)
+    except ValueError as e:
+        messagebox.showerror("Ошибка", str(e))
+        return
+
+    # Обработка каждого ключа
+    keys_hashed = []
+    for i in range(3):
+        key = key_entries[i].get()
+        key_format_selected = key_formats[i].get()
+
+        # Преобразование ключа в 16-ричный формат
+        if key_format_selected == "Обычный":
+            key_hex = text_to_hex(key)
+        elif key_format_selected == "Бинарный":
+            key_hex = binary_to_hex(key)
+        elif key_format_selected == "Шестнадцатиричный":
+            key_hex = key.upper()
+        else:
+            messagebox.showerror("Ошибка", f"Неверный формат ключа {i + 1}.")
+            return
+
+        # Хэширование ключа (SHA-256) и обрезка до 14 символов
+        key_hashed = hashlib.sha256(key_hex.encode()).hexdigest()[:14].upper()
+        keys_hashed.append(key_hashed)
+
+    # Сохранение данных
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    # Создаем папку для данных, если она не существует
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'w') as file:
+            file.write(f"Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {padded_text}\n")
+
+        # Сохранение ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'w') as file:
+            for i, key_hashed in enumerate(keys_hashed, start=1):
+                file.write(f"Формат ключа ({i}): Шестнадцатиричный\n")
+                file.write(f"Данные ключа ({i}): {key_hashed}\n\n")
+
+        messagebox.showinfo("Успех", "Данные успешно сохранены!")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Произошла ошибка при сохранении данных: {str(e)}")
+
+##########################################################################################################
+# 
+# # Функция дополнения данных
+#                   
+##########################################################################################################
+def pad_to_64_bits(input_text, text_format):
+    """
+    Дополняет текст до кратности 64 бит для DES.
+    
+    :param input_text: Текст в текстовом, шестнадцатиричном или бинарном формате.
+    :param text_format: Формат текста ("Обычный", "Шестнадцатиричный", "Бинарный").
+    :return: Дополненный текст в бинарном формате.
+    """
+    # Шаг 1: Преобразование текста в бинарный формат
+    if text_format == "Обычный":
+        # Преобразуем каждый символ в 8-битный бинарный код
+        binary_text = ''.join(format(ord(char), '08b') for char in input_text)
+    elif text_format == "Шестнадцатиричный":
+        # Преобразуем каждую 16-ричную пару в 8-битный бинарный код
+        binary_text = ''.join(format(int(input_text[i:i+2], 16), '08b') for i in range(0, len(input_text), 2))
+    elif text_format == "Бинарный":
+        # Текст уже в бинарном формате
+        binary_text = input_text
+    else:
+        raise ValueError("Неверный формат текста. Ожидается: 'Обычный', 'Шестнадцатиричный' или 'Бинарный'.")
+
+    # Шаг 2: Рассчитываем недостающий объем для кратности 64
+    length = len(binary_text)
+    padding_length = 64 - (length % 64) if length % 64 != 0 else 0
+
+    # Шаг 3: Добавляем дополнение
+    if padding_length > 0:
+        # Дополнение состоит из байтов, равных числу добавленных байтов
+        padding_byte = format(padding_length // 8, '08b')  # Значение дополнения в бинарном формате
+        padding = padding_byte * (padding_length // 8)    # Генерируем нужное количество байтов дополнения
+        binary_text += padding
+
+    return binary_text
+ 
+def edit_lab6_data():
+    messagebox.showinfo("Отредактировать данные", "Функция 'Отредактировать данные' для Лабораторной 6.")
+    
+def encrypt_lab6_data():
+    messagebox.showinfo("Шифрование", "Функция 'Шифрование' для Лабораторной 6.")
+    
+def decrypt_lab6_data():
+    messagebox.showinfo("Дешифровка", "Функция 'Дешифровка' для Лабораторной 6.")
+    
+def show_lab6_data():
+    messagebox.showinfo("Отобразить данные", "Функция 'Отобразить данные' для Лабораторной 6.")
+    
+def analyze_lab6_avalanche():
+    messagebox.showinfo("Анализ лавинного эффекта", "Функция 'Анализ лавинного эффекта' для Лабораторной 6.")
 
 
 ##########################################################################################################
