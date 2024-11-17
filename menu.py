@@ -1170,6 +1170,7 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
 # # Функция дополнения данных
 #                   
 ##########################################################################################################
+
 def pad_to_64_bits(input_text, text_format):
     """
     Дополняет текст до кратности 64 бит для DES.
@@ -1209,6 +1210,7 @@ def pad_to_64_bits(input_text, text_format):
 # # Функция для режима OFB
 #                   
 ##########################################################################################################
+
 def show_ofb_menu():
     clear_screen()
 
@@ -1328,12 +1330,52 @@ def des_ofb_encryption(binary_text, iv, key):
             for bit_text, bit_iv in zip(block, encrypted_iv)
         )
         cipher_text += encrypted_block
-
         # Обновление IV для следующего блока
         current_iv = encrypted_iv
 
     # Сохранение результата в файл
     save_encrypted_data_OFB(cipher_text, extended_key)
+
+    return cipher_text
+
+def des_ofb_encryption_no_save(binary_text, iv, key):
+    """
+    Выполняет шифрование текста методом OFB с использованием DES.
+
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param iv: Вектор инициализации в бинарном формате (64 бита).
+    :param key: Ключ в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка входных данных
+    if len(iv) != 64:
+        raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
+    if len(key) != 56:
+        raise ValueError("Ключ должен быть длиной 56 бит.")
+    if len(binary_text) % 64 != 0:
+        raise ValueError("Текст должен быть кратен 64 битам.")
+
+    # Добавляем биты четности к ключу
+    extended_key = coding.add_parity_bits(key)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+
+    # Шифрование методом OFB
+    cipher_text = ""
+    current_iv = iv
+    for block in blocks:
+        # Генерация псевдослучайного блока (шифрование текущего IV)
+        encrypted_iv = coding.encrypt(current_iv, extended_key)
+
+        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        encrypted_block = ''.join(
+            '1' if bit_text != bit_iv else '0'
+            for bit_text, bit_iv in zip(block, encrypted_iv)
+        )
+        cipher_text += encrypted_block
+        # Обновление IV для следующего блока
+        current_iv = encrypted_iv
 
     return cipher_text
 
@@ -1473,6 +1515,7 @@ def save_decryption_result(binary, text, hex_text):
 # # Функция отображения данных
 #                   
 ##########################################################################################################
+
 def remove_padding(binary_text):
     """
     Удаляет padding из текста в бинарном формате.
@@ -1544,7 +1587,232 @@ def show_lab6_data():
 #                   
 ##########################################################################################################
 
-def analyze_ofb_avalanche(): return 0
+def analyze_ofb_avalanche(): 
+    """
+    Меню для анализа лавинного эффекта.
+    Пользователь может ввести текст (3 блока), вектор инициализации и ключ,
+    а также выбрать, какой бит изменить: в тексте, ключе или в векторе.
+    """
+    clear_screen()
+
+    # Заголовок
+    ttk.Label(root, text="Анализ лавинного эффекта", style="TLabel").pack(pady=10)
+
+    # Поле ввода для текста
+    ttk.Label(root, text="Введите текст (3 блока):", style="TLabel").pack(pady=5)
+    text_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    text_format.pack(pady=5)
+    text_format.current(0)  # По умолчанию обычный текст
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.insert(0, "REPUBLREPUBLIREPUBLICCIC")  # Пресетное значение
+    text_entry.pack(pady=5)
+
+    # Поле ввода для вектора инициализации
+    ttk.Label(root, text="Введите вектор инициализации (IV):", style="TLabel").pack(pady=5)
+    iv_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    iv_format.pack(pady=5)
+    iv_format.current(1)  # По умолчанию шестнадцатиричный
+    iv_entry = ttk.Entry(root, width=100)
+    iv_entry.insert(0, "1234567890ABCDEF")  # Пресетное значение (16-ричный)
+    iv_entry.pack(pady=5)
+
+    # Поле ввода для ключа с выбором формата
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key_format.pack(pady=5)
+    key_format.current(1)  # По умолчанию шестнадцатиричный
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.insert(0, "FEDCBA98765432")  # Пресетное значение (16-ричный)
+    key_entry.pack(pady=5)
+
+    text = text_entry.get()
+    key = key_entry.get()
+    iv = iv_entry.get()
+
+    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: ofb_analyze_text_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в ключе", style="TButton", command=lambda: ofb_analyze_key_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в векторе", style="TButton", command=lambda: ofb_analyze_iv_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в шифртексте", style="TButton", command=lambda: ofb_analyze_cipher_bit_change(text, key, iv)).pack(padx=5)
+    # Кнопка назад
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+def flip_bit(binary_string, bit_position):
+    bit_list = list(binary_string)
+    # Меняем выбранный бит (0 на 1, 1 на 0)
+    bit_list[bit_position] = '1' if bit_list[bit_position] == '0' else '0'
+    return ''.join(bit_list)
+
+def xor(bin_str1, bin_str2):
+    if len(bin_str1) != len(bin_str2):
+        raise ValueError("Длины бинарных строк должны совпадать.")
+    
+    return ''.join(str(int(b1) ^ int(b2)) for b1, b2 in zip(bin_str1, bin_str2))
+
+def split_to_blocks(binary_string, block_size=64, block_count=3):
+    # Вычисляем общую длину строки, необходимую для блоков
+    total_length = block_size * block_count
+    # Разделяем строку на блоки
+    blocks = [binary_string[i:i + block_size] for i in range(0, total_length, block_size)]
+    return blocks
+
+def plot_three_graphs(y1, y2, y3):
+    """
+    Строит три графика на одном поле.
+    
+    :param y1: Массив значений для первого графика (ось Y).
+    :param y2: Массив значений для второго графика (ось Y).
+    :param y3: Массив значений для третьего графика (ось Y).
+    """
+    # Проверяем, что длины массивов совпадают
+    if not (len(y1) == len(y2) == len(y3)):
+        raise ValueError("Все массивы должны быть одинаковой длины.")
+    
+    # Создаем массив значений для оси X (0 до 64*3)
+    x = range(len(y1))  # Ожидается, что длина y1 равна 64*3
+    
+    # Построение графиков
+    plt.figure(figsize=(12, 6))
+    plt.plot(x, y1, label="График 1: Блок C1", marker="o", linestyle="-")
+    plt.plot(x, y2, label="График 2: Блок C2", marker="s", linestyle="--")
+    plt.plot(x, y3, label="График 3: Блок C3", marker="d", linestyle=":")
+
+    # Настройка графика
+    plt.title("Анализ лавинного эффекта")
+    plt.xlabel("Изменяемый бит в тексте")
+    plt.ylabel("Количество изменённых битов")
+    plt.grid(True, linestyle="--", alpha=0.7)
+    plt.legend()
+    plt.tight_layout()
+
+    # Показ графика
+    plt.show()
+
+def ofb_analyze_text_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_ofb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (64*3):
+        new_text = flip_bit(text, i)
+        new_cipher = des_ofb_encryption_no_save(new_text, iv, key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (64*3):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)
+     
+def ofb_analyze_key_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_ofb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (56):
+        new_key = flip_bit(key, i)
+        new_cipher = des_ofb_encryption_no_save(text, iv, new_key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (56):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)    
+
+def ofb_analyze_iv_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_ofb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (64):
+        new_iv = flip_bit(iv, i)
+        new_cipher = des_ofb_encryption_no_save(text, new_iv, key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (64):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)  
+
+def ofb_analyze_cipher_bit_change(text, key, iv):
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_ofb_encryption_no_save(text, iv, key)
+    text_P = split_to_blocks(text)
+
+    P1 = []
+    P2 = []
+    P3 = []
+    
+    for i in range (64*3):
+        new_cipher = flip_bit(cipher, i)
+        new_plain = des_ofb_encryption_no_save(new_cipher, iv, key)
+        temp = split_to_blocks(new_plain)
+        P1.append(temp[0])
+        P2.append(temp[1])
+        P3.append(temp[2])
+
+    P1_count = []
+    P2_count = []
+    P3_count = []
+
+    for i in range (64*3):
+        change_P1 = xor(text_P[0], P1[i])
+        change_P2 = xor(text_P[1], P2[i])
+        change_P3 = xor(text_P[2], P3[i])
+        P1_count.append(change_P1.count('1'))
+        P2_count.append(change_P2.count('1'))
+        P3_count.append(change_P3.count('1'))
+    
+    plot_three_graphs(P1_count, P2_count, P3_count)  
+
 
 
 

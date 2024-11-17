@@ -166,19 +166,19 @@ def encrypt(message, key):
 
     key_schedule = generate_keys(key)
 
-    print('Шифрованная информация (16-ричная система): ', bin_to_hex(message, 64))
+    #print('Шифрованная информация (16-ричная система): ', bin_to_hex(message, 64))
     perm = IP(message)
-    print('После инициальной перестановки: ', bin_to_hex(perm, 64))
+    #print('После инициальной перестановки: ', bin_to_hex(perm, 64))
     left_half, right_half = perm[0:32], perm[32:64]
     
-    print(' ' * 10, 'Левая часть', 'Правая часть', 'Сабключ')
+    #print(' ' * 10, 'Левая часть', 'Правая часть', 'Сабключ')
     for loop in range(16):
         left_half, right_half = round(left_half, right_half, key_schedule[loop])
         if loop == 15: 
             buffer = left_half
             left_half = right_half
             right_half = buffer
-        print('Раунд: ', loop + 1, ' ', bin_to_hex(left_half, 32), ' ', bin_to_hex(right_half, 32), ' ', bin_to_hex(key_schedule[loop], 48))
+        #print('Раунд: ', loop + 1, ' ', bin_to_hex(left_half, 32), ' ', bin_to_hex(right_half, 32), ' ', bin_to_hex(key_schedule[loop], 48))
     cyphertext = IP_Inverse(left_half + right_half)
     return cyphertext
 
@@ -200,14 +200,14 @@ def decrypt(message, key):
     print('После инициальной перестановки: ', bin_to_hex(perm, 64))
     left_half, right_half = perm[0:32], perm[32:64]
 
-    print(' ' * 10, 'Левая часть ', 'Правая часть ', 'Сабключ  ')
+    #print(' ' * 10, 'Левая часть ', 'Правая часть ', 'Сабключ  ')
     for loop in range(16):
         left_half, right_half = round(left_half, right_half, key_schedule[15 - loop])
-        if loop == 15: # For Some Reason The Algorithm Doesn't Swap The Last Two Keys So This Switches Them Back
+        if loop == 15: 
             buffer = left_half
             left_half = right_half
             right_half = buffer
-        print('Раунд: ', loop + 1, ' ', bin_to_hex(left_half, 32), ' ', bin_to_hex(right_half, 32), ' ', bin_to_hex(key_schedule[loop], 48))
+        #print('Раунд: ', loop + 1, ' ', bin_to_hex(left_half, 32), ' ', bin_to_hex(right_half, 32), ' ', bin_to_hex(key_schedule[loop], 48))
     cyphertext = IP_Inverse(left_half + right_half)
     return cyphertext
 
@@ -275,3 +275,9 @@ def binary_to_text(binary_data):
 #print('Decrypted Result: ', bin_to_hex(decrypt(b, test2), 64))
 #for key in generate_keys(test1):
 #    print(bin_to_hex(key, 48))
+
+def flip_bit(binary_string, bit_position):
+    bit_list = list(binary_string)
+    # Меняем выбранный бит (0 на 1, 1 на 0)
+    bit_list[bit_position] = '1' if bit_list[bit_position] == '0' else '0'
+    return ''.join(bit_list)
