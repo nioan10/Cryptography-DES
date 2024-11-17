@@ -16,6 +16,7 @@ import avalanche_all
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import hashlib
 
 ##########################################################################################################
 # 
@@ -971,42 +972,29 @@ def save_data(text_entry, text_format, key_entry, key_format):
             messagebox.showerror("Ошибка", "Текст должен содержать ровно 8 символов.")
             return
         
-        # Проверка ключа
-    if key_format_selected == "Бинарный":
-        if len(key) != 56:
-            messagebox.showerror("Ошибка", "Ключ в бинарном формате должен содержать ровно 64 бита.")
-            return
-    elif key_format_selected == "Шестнадцатиричный":
-        if len(key) != 14:
-            messagebox.showerror("Ошибка", "Ключ в шестнадцатиричном формате должен содержать ровно 16 символов.")
-            return
-    elif key_format_selected == "Обычный":
-        if len(key) != 7:
-            messagebox.showerror("Ошибка", "Ключ должен содержать ровно 7 символов.")
-            return
+    # Преобразование ключа в хэш
+    full_hashed_key = hashlib.sha256(key.encode()).hexdigest()  # Полный хэш в 16-ричном формате
+    # Обрезка хэша до первых 7 символов
+    shortened_hashed_key = full_hashed_key[:7]
 
-    # Получаем путь к папке проекта
-    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка, где находится скрипт
+    # Сохранение данных
+    project_folder = os.path.dirname(os.path.abspath(__file__))  # Папка проекта
     project_files_folder = os.path.join(project_folder, "project_files")
-
-    # Создаем папку для файлов, если она не существует
     if not os.path.exists(project_files_folder):
         os.makedirs(project_files_folder)
 
-    # Если все проверки пройдены, сохраняем текст и ключ в файлы в папке проекта
     try:
-        # Сохраняем текст в файл
+        # Сохранение текста
         text_filename = os.path.join(project_files_folder, "text_data.txt")
         with open(text_filename, 'w') as file:
             file.write(f"Формат текста: {text_format_selected}\n")
             file.write(f"Данные текста: {text}\n")
-            messagebox.showinfo("Успех", f"Текст успешно записан/перезаписан в файл {text_filename}.")
         
         # Сохраняем ключ в файл
         key_filename = os.path.join(project_files_folder, "key_data.txt")
         with open(key_filename, 'w') as file:
-            file.write(f"Формат ключа: {key_format_selected}\n")
-            file.write(f"Данные ключа: {key}\n")
+            file.write(f"Формат ключа: Обычный\n")
+            file.write(f"Данные ключа: {shortened_hashed_key}\n")
             messagebox.showinfo("Успех", f"Ключ успешно записан/перезаписан в файл {key_filename}.")
 
     except Exception as e:
