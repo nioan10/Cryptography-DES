@@ -1019,6 +1019,9 @@ def show_lab6_menu():
     ttk.Button(root, text="Задать данные", command=set_lab6_data, style="TButton").pack(pady=10)
     ttk.Button(root, text="Режим шифрования OFB", command=show_ofb_menu, style="TButton").pack(pady=10)
     ttk.Button(root, text="Кратное шифрование тремя ключами", command=show_triple_key_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Кратное шифрование CFB", command=show_cfb_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Кратное шифрование EDE", command=show_EDE_menu, style="TButton").pack(pady=10)
+
     
     ttk.Button(root, text="Отобразить данные", command=show_lab6_data, style="TButton").pack(pady=10)
     
@@ -1091,10 +1094,14 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
     text_format_selected = text_format.get()
     iv = iv_entry.get()
     iv_format_selected = iv_format.get()
+    if text_format_selected == "Обычный":
+        text = text_to_binary(text)
+    elif text_format_selected == "Шестнадцатиричный":
+        text = hex_to_binary(text)
 
     # Преобразование и дополнение текста
     try:
-        padded_text = pad_to_64_bits(text, text_format_selected)
+        padded_text = pad_to_64_bits(text)
     except ValueError as e:
         messagebox.showerror("Ошибка", str(e))
         return
@@ -1120,7 +1127,7 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
         key_hashed = hashlib.sha256(key_hex.encode()).hexdigest()[:14].upper()
         keys_hashed.append(key_hashed)
 
-        # Преобразование вектора инициализации в 16-ричный формат и обрезка до 16 байт
+    # Преобразование вектора инициализации в 16-ричный формат и обрезка до 16 байт
     if iv_format_selected == "Обычный":
         iv_hex = ''.join(format(ord(c), '02x') for c in iv).upper()
     elif iv_format_selected == "Бинарный":
@@ -1171,39 +1178,32 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
 #                   
 ##########################################################################################################
 
-def pad_to_64_bits(input_text, text_format):
+def pad_to_64_bits(binary_text):
     """
-    Дополняет текст до кратности 64 бит для DES.
-    
-    :param input_text: Текст в текстовом, шестнадцатиричном или бинарном формате.
-    :param text_format: Формат текста ("Обычный", "Шестнадцатиричный", "Бинарный").
-    :return: Дополненный текст в бинарном формате.
+    Дополняет бинарный текст по стандарту PKCS#7.
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :return: Дополненный бинарный текст.
     """
-    # Шаг 1: Преобразование текста в бинарный формат
-    if text_format == "Обычный":
-        # Преобразуем каждый символ в 8-битный бинарный код
-        binary_text = ''.join(format(ord(char), '08b') for char in input_text)
-    elif text_format == "Шестнадцатиричный":
-        # Преобразуем каждую 16-ричную пару в 8-битный бинарный код
-        binary_text = ''.join(format(int(input_text[i:i+2], 16), '08b') for i in range(0, len(input_text), 2))
-    elif text_format == "Бинарный":
-        # Текст уже в бинарном формате
-        binary_text = input_text
-    else:
-        raise ValueError("Неверный формат текста. Ожидается: 'Обычный', 'Шестнадцатиричный' или 'Бинарный'.")
+    # Вычисляем количество байтов в данных
+    data_len_bits = len(binary_text)
+    data_len_bytes = data_len_bits // 8
+    if data_len_bits % 8 != 0:
+        # Если есть остаток, то данные некорректны
+        raise ValueError("Длина бинарного текста должна быть кратна 8 битам.")
 
-    # Шаг 2: Рассчитываем недостающий объем для кратности 64
-    length = len(binary_text)
-    padding_length = 64 - (length % 64) if length % 64 != 0 else 0
+    block_size = 8  # Размер блока в байтах для DES
+    padding_len = block_size - (data_len_bytes % block_size)
+    if padding_len == 0:
+        padding_len = block_size  # Всегда добавляем блок заполнителя
 
-    # Шаг 3: Добавляем дополнение
-    if padding_length > 0:
-        # Дополнение состоит из байтов, равных числу добавленных байтов
-        padding_byte = format(padding_length // 8, '08b')  # Значение дополнения в бинарном формате
-        padding = padding_byte * (padding_length // 8)    # Генерируем нужное количество байтов дополнения
-        binary_text += padding
+    # Значение байта заполнителя
+    padding_byte = format(padding_len, '08b')
 
-    return binary_text
+    # Создаем заполнение
+    padding = padding_byte * padding_len
+
+    # Возвращаем дополненный бинарный текст
+    return binary_text + padding
 
 ##########################################################################################################
 # 
@@ -1224,7 +1224,7 @@ def show_ofb_menu():
 
 ##########################################################################################################
 # 
-# # Функция шифровки данных
+# # Функция шифровки данных OFB
 #                   
 ##########################################################################################################
 
@@ -1420,7 +1420,7 @@ def show_encryption_result(cipher_text):
 
 ##########################################################################################################
 # 
-# # Функция дешифровки данных
+# # Функция дешифровки данных OFB
 #                   
 ##########################################################################################################
 
@@ -1464,7 +1464,7 @@ def perform_ofb_decryption():
         cipher_binary = convert_to_binary(cipher_data, cipher_format)
 
         # Выполнение дешифровки (в OFB дешифровка аналогична шифрованию)
-        decrypted_binary = des_ofb_encryption(cipher_binary, iv_binary, key_binary)
+        decrypted_binary = des_ofb_encryption_no_save(cipher_binary, iv_binary, key_binary)
 
         # Убираем padding и преобразуем данные в разные представления
         decrypted_binary_no_padding = remove_padding(decrypted_binary)
@@ -1525,12 +1525,33 @@ def remove_padding(binary_text):
     if len(binary_text) % 8 != 0:
         raise ValueError("Длина бинарного текста не кратна 8 битам.")
 
-    # Последний байт определяет количество байтов дополнения
-    padding_size = int(binary_text[-8:], 2)
-    if padding_size < 1 or padding_size > 8:
-        raise ValueError("Неверный padding в тексте.")
+    # Преобразуем бинарный текст в байты
+    byte_array = bytearray()
+    for i in range(0, len(binary_text), 8):
+        byte = binary_text[i:i+8]
+        byte_array.append(int(byte, 2))
+
+    # Получаем значение последнего байта
+    padding_len = byte_array[-1]
+
+    # Проверяем корректность padding_len
+    if padding_len < 1 or padding_len > 8:
+        raise ValueError("Некорректный размер padding.")
+
+    # Проверяем, что все байты дополнения имеют правильное значение
+    if byte_array[-padding_len:] != bytes([padding_len] * padding_len):
+        raise ValueError("Некорректный padding в данных.")
 
     # Убираем padding
+    unpadded_bytes = byte_array[:-padding_len]
+
+    # Преобразуем обратно в бинарный текст
+    unpadded_binary_text = ''.join(format(byte, '08b') for byte in unpadded_bytes)
+
+    return unpadded_binary_text
+
+
+    # Убираем padding и возвращаем данные без дополнения
     return binary_text[:-padding_size * 8]
 
 def show_lab6_data():
@@ -1583,7 +1604,7 @@ def show_lab6_data():
 
 ##########################################################################################################
 # 
-# # Анализ лавинного эффекта
+# # Анализ лавинного эффекта OFB
 #                   
 ##########################################################################################################
 
@@ -1813,14 +1834,12 @@ def ofb_analyze_cipher_bit_change(text, key, iv):
     
     plot_three_graphs(P1_count, P2_count, P3_count)  
 
-
-
-
 ##########################################################################################################
 # 
 # # Кратное шифрования с тремя ключами
 #                   
 ##########################################################################################################
+
 def show_triple_key_menu():
     """
     Меню для работы с кратным шифрованием с тремя ключами.
@@ -2276,6 +2295,953 @@ def plot_single_graph(y, title="График изменения битов", x_l
 
     # Показ графика
     plt.show()
+
+
+##########################################################################################################
+# 
+# # Функция для режима CFB
+#                   
+##########################################################################################################
+
+def show_cfb_menu():
+    clear_screen()
+
+    # Заголовок меню
+    ttk.Label(root, text="Режим шифрования CFB", style="TLabel").pack(pady=10)
+    ttk.Button(root, text="Отобразить текущие данные", style="TButton", command=show_lab6_data).pack(pady=10)
+    ttk.Button(root, text="Зашифровать", style="TButton", command=perform_cfb_encryption).pack(pady=10)
+    ttk.Button(root, text="Расшифровать", style="TButton", command=perform_cfb_decryption).pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=analyze_cfb_avalanche).pack(pady=10)
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+##########################################################################################################
+# 
+# # Функция шифровки данных CFB
+#                   
+##########################################################################################################
+
+def perform_cfb_encryption():
+    """
+    Выполняет шифрование методом CFB.
+    1. Считывает вектор инициализации, ключ и текст из файлов.
+    2. Преобразует данные в бинарный вид в зависимости от формата.
+    3. Выполняет шифрование методом CFB.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'r') as file:
+            iv_lines = file.readlines()
+            iv_format = iv_lines[0].strip().split(": ")[1]
+            iv_data = iv_lines[1].strip().split(": ")[1]
+
+        # Считывание ключа
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+            key_format = key_lines[0].strip().split(": ")[1]
+            key_data = key_lines[1].strip().split(": ")[1]
+
+        # Считывание текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'r') as file:
+            text_lines = file.readlines()
+            text_format = text_lines[0].strip().split(": ")[1]
+            text_data = text_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        iv_binary = convert_to_binary(iv_data, iv_format)
+        key_binary = convert_to_binary(key_data, key_format)
+        text_binary = convert_to_binary(text_data, text_format)
+
+        # Выполнение шифрования
+        cipher_text = des_cfb_encryption(text_binary, iv_binary, key_binary)
+
+        # Отображение результата шифрования
+        show_encryption_result(cipher_text)
+
+        messagebox.showinfo("Успех", "Шифрование выполнено успешно. Результаты сохранены в файлы.")
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
+
+def des_cfb_encryption(binary_text, iv, key):
+    """
+    Выполняет шифрование текста методом СFB с использованием DES.
+
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param iv: Вектор инициализации в бинарном формате (64 бита).
+    :param key: Ключ в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка входных данных
+    if len(iv) != 64:
+        raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
+    if len(key) != 56:
+        raise ValueError("Ключ должен быть длиной 56 бит.")
+    if len(binary_text) % 64 != 0:
+        raise ValueError("Текст должен быть кратен 64 битам.")
+
+    # Добавляем биты четности к ключу
+    extended_key = coding.add_parity_bits(key)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+
+    # Шифрование методом OFB
+    cipher_text = ""
+    current_iv = iv
+    for block in blocks:
+        # Генерация псевдослучайного блока (шифрование текущего IV)
+        encrypted_iv = coding.encrypt(current_iv, extended_key)
+
+        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        encrypted_block = ''.join(
+            '1' if bit_text != bit_iv else '0'
+            for bit_text, bit_iv in zip(block, encrypted_iv)
+        )
+        # Обновление IV для следующего блока
+        current_iv = encrypted_block
+
+        cipher_text += encrypted_block
+
+
+    # Сохранение результата в файл
+    save_encrypted_data_cfb(cipher_text, extended_key)
+
+    return cipher_text
+
+def des_сfb_encryption_no_save(binary_text, iv, key):
+    """
+    Выполняет шифрование текста методом OFB с использованием DES.
+
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param iv: Вектор инициализации в бинарном формате (64 бита).
+    :param key: Ключ в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка входных данных
+    if len(iv) != 64:
+        raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
+    if len(key) != 56:
+        raise ValueError("Ключ должен быть длиной 56 бит.")
+    if len(binary_text) % 64 != 0:
+        raise ValueError("Текст должен быть кратен 64 битам.")
+
+    # Добавляем биты четности к ключу
+    extended_key = coding.add_parity_bits(key)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+
+    # Шифрование методом OFB
+    cipher_text = ""
+    current_iv = iv
+    for block in blocks:
+        # Генерация псевдослучайного блока (шифрование текущего IV)
+        encrypted_iv = coding.encrypt(current_iv, extended_key)
+
+        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        encrypted_block = ''.join(
+            '1' if bit_text != bit_iv else '0'
+            for bit_text, bit_iv in zip(block, encrypted_iv)
+        )
+        # Обновление IV для следующего блока
+        current_iv = encrypted_block
+
+        cipher_text += encrypted_block
+
+    return cipher_text
+
+def save_encrypted_data_cfb(cipher_text, extended_key):
+    """
+    Сохраняет зашифрованный текст и расширенный ключ в файл в установленном формате.
+
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param extended_key: Расширенный ключ в бинарном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "lab6_cipher_text_CFB.txt")
+        with open(cipher_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {cipher_text}\n")
+
+        # Сохранение расширенного ключа
+        key_filename = os.path.join(project_files_folder, "lab6_extended_key_CFB.txt")
+        with open(key_filename, 'w') as file:
+            file.write("Формат ключа: Бинарный\n")
+            file.write(f"Данные ключа: {extended_key}\n")
+
+        messagebox.showinfo("Успех", "Результат шифрования успешно сохранен!")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+##########################################################################################################
+# 
+# # Функция дешифровки данных CFB
+#                   
+##########################################################################################################
+
+def des_cfb_decryption(cipher_text, iv, key):
+    """
+    Выполняет дешифровку текста методом CFB с использованием DES.
+    
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param iv: Вектор инициализации в бинарном формате (64 бита).
+    :param key: Ключ в бинарном формате (56 бит).
+    :return: Расшифрованный текст в бинарном формате.
+    """
+    # Проверка входных данных аналогична функции шифрования
+
+    # Добавляем биты четности к ключу
+    extended_key = coding.add_parity_bits(key)
+    
+    # Разделение текста на блоки по 64 бита
+    blocks = [cipher_text[i:i + 64] for i in range(0, len(cipher_text), 64)]
+    
+    # Дешифровка методом CFB
+    decrypted_text = ""
+    current_iv = iv
+    for block in blocks:
+        # Шифрование текущего IV
+        encrypted_iv = coding.encrypt(current_iv, extended_key)
+        
+        # Расшифровка блока (XOR зашифрованного IV с текущим блоком шифротекста)
+        decrypted_block = ''.join(
+            '1' if bit_cipher != bit_enc_iv else '0'
+            for bit_cipher, bit_enc_iv in zip(block, encrypted_iv)
+        )
+        
+        # Обновление IV для следующего блока (текущий шифротекст)
+        current_iv = block
+        
+        decrypted_text += decrypted_block
+    
+    return decrypted_text
+
+def perform_cfb_decryption():
+    """
+    Выполняет дешифровку методом CFB.
+    1. Считывает вектор инициализации, ключ и зашифрованный текст из файлов.
+    2. Преобразует данные в бинарный вид в зависимости от формата.
+    3. Выполняет дешифровку методом CFB.
+    4. Отображает результат во всех представлениях (бинарный, обычный, шестнадцатиричный).
+    5. Сохраняет результат дешифровки в файл.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание вектора инициализации
+        iv_filename = os.path.join(project_files_folder, "lab6_iv_data.txt")
+        with open(iv_filename, 'r') as file:
+            iv_lines = file.readlines()
+            iv_format = iv_lines[0].strip().split(": ")[1]
+            iv_data = iv_lines[1].strip().split(": ")[1]
+
+        # Считывание ключа
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+            key_format = key_lines[0].strip().split(": ")[1]
+            key_data = key_lines[1].strip().split(": ")[1]
+
+        # Считывание зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "lab6_cipher_text_CFB.txt")
+        with open(cipher_filename, 'r') as file:
+            cipher_lines = file.readlines()
+            cipher_format = cipher_lines[0].strip().split(": ")[1]
+            cipher_data = cipher_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        iv_binary = convert_to_binary(iv_data, iv_format)
+        key_binary = convert_to_binary(key_data, key_format)
+        cipher_binary = convert_to_binary(cipher_data, cipher_format)
+
+        # Выполнение дешифровки (в CFB дешифровка аналогична шифрованию)
+        decrypted_binary = des_cfb_decryption(cipher_binary, iv_binary, key_binary)
+        
+        # Убираем padding и преобразуем данные в разные представления
+        decrypted_binary_no_padding = remove_padding(decrypted_binary)
+        decrypted_text = binary_to_text(decrypted_binary_no_padding)
+        decrypted_hex = binary_to_hex(decrypted_binary_no_padding)
+
+        # Сохранение результата в файл
+        save_decryption_result_cfb(decrypted_binary, decrypted_text, decrypted_hex)
+
+        # Отображение результата в окне
+        messagebox.showinfo(
+            "Результат дешифровки",
+            f"Текст (Бинарный): {decrypted_binary_no_padding}\n\n"
+            f"Текст (Обычный): {decrypted_text}\n\n"
+            f"Текст (Шестнадцатиричный): {decrypted_hex}"
+        )
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при дешифровке: {str(e)}")
+
+def save_decryption_result_cfb(binary, text, hex_text):
+    """
+    Сохраняет результат дешифровки в файл.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение результата дешифровки
+        decrypted_filename = os.path.join(project_files_folder, "lab6_decrypted_text_CFB.txt")
+        with open(decrypted_filename, 'w') as file:
+            file.write("Формат текста: Обычный\n")
+            file.write(f"Данные текста: {text}\n\n")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+##########################################################################################################
+# 
+# # Анализ лавинного эффекта OFB
+#                   
+##########################################################################################################
+
+def analyze_cfb_avalanche(): 
+    """
+    Меню для анализа лавинного эффекта.
+    Пользователь может ввести текст (3 блока), вектор инициализации и ключ,
+    а также выбрать, какой бит изменить: в тексте, ключе или в векторе.
+    """
+    clear_screen()
+
+    # Заголовок
+    ttk.Label(root, text="Анализ лавинного эффекта", style="TLabel").pack(pady=10)
+
+    # Поле ввода для текста
+    ttk.Label(root, text="Введите текст (3 блока):", style="TLabel").pack(pady=5)
+    text_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    text_format.pack(pady=5)
+    text_format.current(0)  # По умолчанию обычный текст
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.insert(0, "REPUBLREPUBLIREPUBLICCIC")  # Пресетное значение
+    text_entry.pack(pady=5)
+
+    # Поле ввода для вектора инициализации
+    ttk.Label(root, text="Введите вектор инициализации (IV):", style="TLabel").pack(pady=5)
+    iv_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    iv_format.pack(pady=5)
+    iv_format.current(1)  # По умолчанию шестнадцатиричный
+    iv_entry = ttk.Entry(root, width=100)
+    iv_entry.insert(0, "1234567890ABCDEF")  # Пресетное значение (16-ричный)
+    iv_entry.pack(pady=5)
+
+    # Поле ввода для ключа с выбором формата
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key_format.pack(pady=5)
+    key_format.current(1)  # По умолчанию шестнадцатиричный
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.insert(0, "FEDCBA98765432")  # Пресетное значение (16-ричный)
+    key_entry.pack(pady=5)
+
+    text = text_entry.get()
+    key = key_entry.get()
+    iv = iv_entry.get()
+
+    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: ofb_analyze_text_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в ключе", style="TButton", command=lambda: ofb_analyze_key_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в векторе", style="TButton", command=lambda: ofb_analyze_iv_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в шифртексте", style="TButton", command=lambda: ofb_analyze_cipher_bit_change(text, key, iv)).pack(padx=5)
+    # Кнопка назад
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+def cfb_analyze_text_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_сfb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (64*3):
+        new_text = flip_bit(text, i)
+        new_cipher = des_сfb_encryption_no_save(new_text, iv, key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (64*3):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)
+     
+def ofb_analyze_key_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_сfb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (56):
+        new_key = flip_bit(key, i)
+        new_cipher = des_сfb_encryption_no_save(text, iv, new_key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (56):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)    
+
+def ofb_analyze_iv_bit_change(text, key, iv):
+    S1 = []
+    S2 = []
+    S3 = []
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_сfb_encryption_no_save(text, iv, key)
+    cipher_S = split_to_blocks(cipher)
+
+    for i in range (64):
+        new_iv = flip_bit(iv, i)
+        new_cipher = des_сfb_encryption_no_save(text, new_iv, key)
+        temp = split_to_blocks(new_cipher)
+        S1.append(temp[0])
+        S2.append(temp[1])
+        S3.append(temp[2])
+
+    S1_count = []
+    S2_count = []
+    S3_count = []
+
+    for i in range (64):
+        change_S1 = xor(cipher_S[0], S1[i])
+        change_S2 = xor(cipher_S[1], S2[i])
+        change_S3 = xor(cipher_S[2], S3[i])
+        S1_count.append(change_S1.count('1'))
+        S2_count.append(change_S2.count('1'))
+        S3_count.append(change_S3.count('1'))
+    plot_three_graphs(S1_count, S2_count, S3_count)  
+
+def ofb_analyze_cipher_bit_change(text, key, iv):
+    key = hex_to_binary(key)
+    text = text_to_binary(text)
+    iv = hex_to_binary(iv)
+    cipher = des_сfb_encryption_no_save(text, iv, key)
+    text_P = split_to_blocks(text)
+
+    P1 = []
+    P2 = []
+    P3 = []
+    
+    for i in range (64*3):
+        new_cipher = flip_bit(cipher, i)
+        new_plain = des_cfb_decryption(new_cipher, iv, key)
+        temp = split_to_blocks(new_plain)
+        P1.append(temp[0])
+        P2.append(temp[1])
+        P3.append(temp[2])
+
+    P1_count = []
+    P2_count = []
+    P3_count = []
+
+    for i in range (64*3):
+        change_P1 = xor(text_P[0], P1[i])
+        change_P2 = xor(text_P[1], P2[i])
+        change_P3 = xor(text_P[2], P3[i])
+        P1_count.append(change_P1.count('1'))
+        P2_count.append(change_P2.count('1'))
+        P3_count.append(change_P3.count('1'))
+    
+    plot_three_graphs(P1_count, P2_count, P3_count)  
+
+
+##########################################################################################################
+# 
+# # Шифрование по схеме EDE ключами
+#                   
+##########################################################################################################
+
+def show_EDE_menu():
+    clear_screen()
+
+    # Заголовок меню
+    ttk.Label(root, text="Режим шифрования EDE", style="TLabel").pack(pady=10)
+    ttk.Button(root, text="Отобразить текущие данные", style="TButton", command=show_lab6_data).pack(pady=10)
+    ttk.Button(root, text="Зашифровать", style="TButton", command=perform_EDE_key_encryption).pack(pady=10)
+    ttk.Button(root, text="Расшифровать", style="TButton", command=perform_EDE_key_decryption).pack(pady=10)
+    ttk.Button(root, text="Анализ лавинного эффекта", style="TButton", command=analyze_EDE_key_avalanche).pack(pady=10)
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+##########################################################################################################
+# 
+# # Шифрование по схеме EDE 
+#                   
+##########################################################################################################
+
+def perform_EDE_key_encryption():
+    """
+    Выполняет кратное шифрование с тремя ключами.
+    1. Считывает данные из файлов.
+    2. Преобразует их в бинарный вид.
+    3. Выполняет шифрование с помощью трех ключей.
+    4. Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
+    5. Отображает результат через messagebox.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+
+        # Считываем формат и данные для каждого ключа
+        keys = []
+        for i in range(3):
+            key_format = key_lines[i * 2].strip().split(": ")[1]
+            key_data = key_lines[i * 2 + 1].strip().split(": ")[1]
+            keys.append((key_data, key_format))
+
+        # Считывание текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        with open(text_filename, 'r') as file:
+            text_lines = file.readlines()
+            if len(text_lines) < 2:
+                raise ValueError("Файл текста имеет некорректный формат или недостаточное количество данных (ожидается 2 строки).")
+            text_format = text_lines[0].strip().split(": ")[1]
+            text_data = text_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        key1_binary = convert_to_binary(keys[0][0], keys[0][1])
+        key2_binary = convert_to_binary(keys[1][0], keys[1][1])
+        key3_binary = convert_to_binary(keys[2][0], keys[2][1])
+        text_binary = convert_to_binary(text_data, text_format)
+        # Выполнение шифрования
+        cipher_text = EDE_key_encryption(text_binary, key1_binary, key2_binary, key3_binary)
+
+        # Добавляем биты четности к каждому ключу
+        extended_key1 = coding.add_parity_bits(key1_binary)
+        extended_key2 = coding.add_parity_bits(key2_binary)
+        extended_key3 = coding.add_parity_bits(key3_binary)
+
+        # Сохранение результата в файлы
+        save_EDE_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3)
+
+        # Отображение результата
+        show_EDE_encryption_result(cipher_text)
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при шифровании: {str(e)}")
+
+def save_EDE_encryption_results(cipher_text, extended_key1, extended_key2, extended_key3):
+    """
+    Сохраняет результат шифрования и расширенные ключи в файлы с префиксом 'triple'.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param extended_key1: Расширенный ключ 1 в бинарном формате.
+    :param extended_key2: Расширенный ключ 2 в бинарном формате.
+    :param extended_key3: Расширенный ключ 3 в бинарном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение зашифрованного текста
+        cipher_filename = os.path.join(project_files_folder, "EDE_cipher_text.txt")
+        with open(cipher_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {cipher_text}\n")
+
+        # Сохранение расширенных ключей
+        key_filename = os.path.join(project_files_folder, "EDE_extended_keys.txt")
+        with open(key_filename, 'w') as file:
+            file.write("Формат ключа: Бинарный\n")
+            file.write(f"Ключ 1: {extended_key1}\n")
+            file.write(f"Ключ 2: {extended_key2}\n")
+            file.write(f"Ключ 3: {extended_key3}\n")
+
+        messagebox.showinfo("Успех", "Результаты шифрования успешно сохранены!")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def show_EDE_encryption_result(cipher_text):
+    """
+    Отображает результат шифрования через messagebox.
+    :param cipher_text: Зашифрованный текст в бинарном формате.
+    """
+    # Показываем первые 512 символов, чтобы избежать переполнения окна
+    truncated_text = cipher_text[:512] + "..." if len(cipher_text) > 512 else cipher_text
+    messagebox.showinfo("Результат шифрования", f"Зашифрованный текст (первые 512 символов):\n{truncated_text}")
+
+def EDE_key_encryption(binary_text, key1, key2, key3):
+    """
+    Выполняет кратное шифрование с тремя ключами.
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :param key1: Ключ 1 в бинарном формате (56 бит).
+    :param key2: Ключ 2 в бинарном формате (56 бит).
+    :param key3: Ключ 3 в бинарном формате (56 бит).
+    :return: Зашифрованный текст в бинарном формате.
+    """
+    # Проверка длины ключей
+    if len(key1) != 56 or len(key2) != 56 or len(key3) != 56:
+        raise ValueError("Каждый ключ должен быть длиной 56 бит.")
+
+    # Добавляем биты четности к каждому ключу
+    extended_key1 = coding.add_parity_bits(key1)
+    extended_key2 = coding.add_parity_bits(key2)
+    extended_key3 = coding.add_parity_bits(key3)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    cipher_text = ""
+
+    # Тройное шифрование для каждого блока
+    for block in blocks:
+        # Первый этап: шифрование с ключом 1
+        encrypted_block1 = coding.encrypt(block, extended_key1)
+        # Второй этап: шифрование с ключом 2
+        encrypted_block2 = coding.decrypt(encrypted_block1, extended_key2)
+        # Третий этап: шифрование с ключом 3
+        encrypted_block3 = coding.encrypt(encrypted_block2, extended_key3)
+        cipher_text += encrypted_block3
+
+    return cipher_text
+
+##########################################################################################################
+# 
+# # Дешифрование по схеме EDE
+#                   
+##########################################################################################################
+
+def perform_EDE_key_decryption():
+    """
+    Выполняет кратное дешифрование с тремя ключами.
+    1. Считывает данные из файлов.
+    2. Преобразует их в бинарный вид.
+    3. Выполняет дешифрование.
+    4. Удаляет padding.
+    5. Сохраняет результат в файл и выводит через messagebox.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    try:
+        # Считывание ключей
+        key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
+        with open(key_filename, 'r') as file:
+            key_lines = file.readlines()
+
+        # Проверяем, чтобы ключи имели ожидаемый формат (6 строк)
+        if len(key_lines) < 6:
+            raise ValueError("Файл ключей имеет некорректный формат или недостаточное количество данных (ожидается 6 строк).")
+
+        # Считываем формат и данные для каждого ключа
+        keys = []
+        for i in range(3):
+            key_format = key_lines[i * 2].strip().split(": ")[1]
+            key_data = key_lines[i * 2 + 1].strip().split(": ")[1]
+            keys.append((key_data, key_format))
+
+        # Считывание текста
+        cipher_filename = os.path.join(project_files_folder, "EDE_cipher_text.txt")
+        with open(cipher_filename, 'r') as file:
+            cipher_lines = file.readlines()
+            if len(cipher_lines) < 2:
+                raise ValueError("Файл зашифрованного текста имеет некорректный формат или недостаточное количество данных (ожидается 2 строки).")
+            cipher_format = cipher_lines[0].strip().split(": ")[1]
+            cipher_data = cipher_lines[1].strip().split(": ")[1]
+
+        # Преобразование данных в бинарный вид
+        key1_binary = convert_to_binary(keys[0][0], keys[0][1])
+        key2_binary = convert_to_binary(keys[1][0], keys[1][1])
+        key3_binary = convert_to_binary(keys[2][0], keys[2][1])
+        cipher_binary = convert_to_binary(cipher_data, cipher_format)
+
+        # Выполнение дешифрования
+        decrypted_binary = EDE_key_decryption(cipher_binary, key1_binary, key2_binary, key3_binary)
+
+        # Удаление padding
+        decrypted_binary_no_padding = remove_padding(decrypted_binary)
+        decrypted_text = binary_to_text(decrypted_binary_no_padding)
+        decrypted_hex = binary_to_hex(decrypted_binary_no_padding)
+
+        # Сохранение результата в файлы
+        save_EDE_decryption_results(decrypted_binary_no_padding, decrypted_text, decrypted_hex)
+
+        # Отображение результата
+        show_EDE_decryption_result(decrypted_binary_no_padding, decrypted_text, decrypted_hex)
+
+    except FileNotFoundError as e:
+        messagebox.showerror("Ошибка", f"Файл не найден: {str(e)}")
+    except ValueError as e:
+        messagebox.showerror("Ошибка", str(e))
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при дешифровании: {str(e)}")
+
+def EDE_key_decryption(cipher_text, key1, key2, key3):
+    """
+    Выполняет кратное дешифрование с тремя ключами.
+    :param cipher_text: Зашифрованный текст в бинарном формате (строка из 0 и 1).
+    :param key1: Ключ 1 в бинарном формате (56 бит).
+    :param key2: Ключ 2 в бинарном формате (56 бит).
+    :param key3: Ключ 3 в бинарном формате (56 бит).
+    :return: Дешифрованный текст в бинарном формате.
+    """
+    # Проверка длины ключей
+    if len(key1) != 56 or len(key2) != 56 or len(key3) != 56:
+        raise ValueError("Каждый ключ должен быть длиной 56 бит.")
+
+    # Добавляем биты четности к каждому ключу
+    extended_key1 = coding.add_parity_bits(key1)
+    extended_key2 = coding.add_parity_bits(key2)
+    extended_key3 = coding.add_parity_bits(key3)
+
+    # Разделение текста на блоки по 64 бита
+    blocks = [cipher_text[i:i + 64] for i in range(0, len(cipher_text), 64)]
+    plain_text = ""
+
+    # Тройное дешифрование для каждого блока
+    for block in blocks:
+        # Первый этап: дешифрование с ключом 3
+        decrypted_block1 = coding.decrypt(block, extended_key3)
+        # Второй этап: дешифрование с ключом 2
+        decrypted_block2 = coding.encrypt(decrypted_block1, extended_key2)
+        # Третий этап: дешифрование с ключом 1
+        decrypted_block3 = coding.decrypt(decrypted_block2, extended_key1)
+        plain_text += decrypted_block3
+
+    return plain_text
+
+def save_EDE_decryption_results(binary, text, hex_text):
+    """
+    Сохраняет результат дешифрования в файл.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+    project_files_folder = os.path.join(project_folder, "lab6_files")
+
+    if not os.path.exists(project_files_folder):
+        os.makedirs(project_files_folder)
+
+    try:
+        # Сохранение результата дешифрования
+        decrypted_filename = os.path.join(project_files_folder, "EDE_decrypted_text.txt")
+        with open(decrypted_filename, 'w') as file:
+            file.write("Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {binary}\n\n")
+            file.write("Формат текста: Обычный\n")
+            file.write(f"Данные текста: {text}\n\n")
+            file.write("Формат текста: Шестнадцатиричный\n")
+            file.write(f"Данные текста: {hex_text}\n")
+
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Ошибка при сохранении данных: {str(e)}")
+
+def show_EDE_decryption_result(binary, text, hex_text):
+    """
+    Отображает результат дешифрования через messagebox.
+    :param binary: Дешифрованный текст в бинарном формате.
+    :param text: Дешифрованный текст в обычном формате.
+    :param hex_text: Дешифрованный текст в шестнадцатиричном формате.
+    """
+    messagebox.showinfo(
+        "Результат дешифрования",
+        f"Текст (Бинарный): {binary}\n\n"
+        f"Текст (Обычный): {text}\n\n"
+        f"Текст (Шестнадцатиричный): {hex_text}"
+    )
+
+##########################################################################################################
+# 
+# # Анализ лавинного эффекта в режиме EDE
+#                   
+##########################################################################################################
+
+def analyze_EDE_key_avalanche():
+    clear_screen()
+
+    # Заголовок
+    ttk.Label(root, text="Анализ лавинного эффекта", style="TLabel").pack(pady=10)
+
+    # Поле ввода для текста
+    ttk.Label(root, text="Введите текст (1 блок):", style="TLabel").pack(pady=5)
+    text_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    text_format.pack(pady=5)
+    text_format.current(0)  # По умолчанию обычный текст
+    text_entry = ttk.Entry(root, width=100)
+    text_entry.insert(0, "REPUBLIC")  # Пресетное значение
+    text_entry.pack(pady=5)
+
+    # Поле ввода для ключа с выбором формата
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key_format.pack(pady=5)
+    key_format.current(1)  # По умолчанию шестнадцатиричный
+    key_entry = ttk.Entry(root, width=100)
+    key_entry.insert(0, "A1B2C3D4E5F678")  # Пресетное значение (16-ричный)
+    key_entry.pack(pady=5)
+
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key2_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key2_format.pack(pady=5)
+    key2_format.current(1)  # По умолчанию шестнадцатиричный
+    key2_entry = ttk.Entry(root, width=100)
+    key2_entry.insert(0, "FEDCBA98765432")  # Пресетное значение (16-ричный)
+    key2_entry.pack(pady=5)
+
+    ttk.Label(root, text="Введите ключ:", style="TLabel").pack(pady=5)
+    key3_format = ttk.Combobox(root, values=["Обычный", "Шестнадцатиричный", "Бинарный"], state="readonly")
+    key3_format.pack(pady=5)
+    key3_format.current(1)  # По умолчанию шестнадцатиричный
+    key3_entry = ttk.Entry(root, width=100)
+    key3_entry.insert(0, "1234567890ABCD")  # Пресетное значение (16-ричный)
+    key3_entry.pack(pady=5)
+
+    text = text_entry.get()
+    key1 = key_entry.get()
+    key2 = key2_entry.get()
+    key3 = key3_entry.get()
+
+    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: EDE_analyze_text_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 1ом ключе", style="TButton", command=lambda: EDE_analyze_key1_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 2ом ключе", style="TButton", command=lambda: EDE_analyze_key2_bit_change(text, key1, key2, key3)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в 3ем ключе", style="TButton", command=lambda: EDE_analyze_key3_bit_change(text, key1, key2, key3)).pack(padx=5)
+
+    # Кнопка назад
+    ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
+
+def EDE_analyze_text_bit_change(text, key1, key2, key3): 
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = EDE_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (64):
+        new_text = flip_bit(text,i)
+        new_cipher = triple_key_encryption(new_text, key1, key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (64):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def EDE_analyze_key1_bit_change(text, key1, key2, key3): 
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = EDE_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key1 = flip_bit(key1 ,i)
+        new_cipher = EDE_key_encryption(text, new_key1, key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def EDE_analyze_key2_bit_change(text, key1, key2, key3):
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = EDE_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key2 = flip_bit(key2, i)
+        new_cipher = EDE_key_encryption(text, key1, new_key2, key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)
+
+def EDE_analyze_key3_bit_change(text, key1, key2, key3):
+    key1 = hex_to_binary(key1)
+    key2 = hex_to_binary(key2)
+    key3 = hex_to_binary(key3)   
+    text = text_to_binary(text)
+    cipher = EDE_key_encryption(text, key1, key2, key3)
+
+    new_cipher_S = []
+    for i in range (56):
+        new_key3 = flip_bit(key3, i)
+        new_cipher = EDE_key_encryption(text, key1, key2, new_key3)
+        new_cipher_S.append(new_cipher)
+
+    S_count = []
+    for i in range (56):
+        change_S = xor(cipher, new_cipher_S[i])
+        S_count.append(change_S.count('1'))
+    plot_single_graph(S_count)    
+
+
+
+
+
 
 
 ##########################################################################################################
