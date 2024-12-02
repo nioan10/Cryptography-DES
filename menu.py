@@ -27,8 +27,8 @@ def show_main_menu():
     clear_screen()
     
     ttk.Label(root, text="Главное меню", style="TLabel").pack(pady=60)
-    ttk.Button(root, text="Лабораторная 5", command=show_work_menu, style="TButton").pack(pady=10)
-    ttk.Button(root, text="Лабораторная 6", command=show_lab6_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Лабораторная 4", command=show_work_menu, style="TButton").pack(pady=10)
+    ttk.Button(root, text="Лабораторная 5", command=show_lab6_menu, style="TButton").pack(pady=10)
     ttk.Button(root, text="Создатели", command=show_creators, style="TButton").pack(pady=10)
     ttk.Button(root, text="О программе", command=show_about, style="TButton").pack(pady=10)
     ttk.Button(root, text="Выход", command=root.quit, style="TButton").pack(pady=10)
@@ -1102,6 +1102,7 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
     # Преобразование и дополнение текста
     try:
         padded_text = pad_to_64_bits(text)
+        padded_56 = pad_to_56_bits(text)
     except ValueError as e:
         messagebox.showerror("Ошибка", str(e))
         return
@@ -1155,6 +1156,12 @@ def save_lab6_data_with_keys(text_entry, text_format, key_entries, key_formats, 
             file.write(f"Формат текста: Бинарный\n")
             file.write(f"Данные текста: {padded_text}\n")
 
+        # Сохранение текста
+        text_filename = os.path.join(project_files_folder, "lab6_text_data_56.txt")
+        with open(text_filename, 'w') as file:
+            file.write(f"Формат текста: Бинарный\n")
+            file.write(f"Данные текста: {padded_56}\n")
+
         # Сохранение ключей
         key_filename = os.path.join(project_files_folder, "lab6_key_data.txt")
         with open(key_filename, 'w') as file:
@@ -1205,6 +1212,42 @@ def pad_to_64_bits(binary_text):
     # Возвращаем дополненный бинарный текст
     return binary_text + padding
 
+def pad_to_56_bits(binary_text):
+    """
+    Дополняет бинарный текст до кратного 56 битам с использованием PKCS#7 padding.
+
+    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
+    :return: Дополненный бинарный текст.
+    """
+    block_size_bytes = 7  # 56 бит = 7 байт
+    text_len_bytes = len(binary_text) // 8
+    padding_len_bytes = block_size_bytes - (text_len_bytes % block_size_bytes)
+    if padding_len_bytes == 0:
+        padding_len_bytes = block_size_bytes
+    padding_byte = format(padding_len_bytes, '08b')
+    padding = padding_byte * padding_len_bytes
+    return binary_text + padding
+
+def unpad_from_56_bits(padded_binary_text):
+    """
+    Удаляет padding из бинарного текста, дополненного до кратного 56 битам.
+
+    :param padded_binary_text: Дополненный бинарный текст.
+    :return: Исходный бинарный текст без padding.
+    """
+    if len(padded_binary_text) % 56 != 0:
+        raise ValueError("Длина текста не кратна 56 битам.")
+    # Извлекаем последний байт
+    last_byte = padded_binary_text[-8:]
+    padding_len_bytes = int(last_byte, 2)
+    if padding_len_bytes < 1 or padding_len_bytes > 7:
+        raise ValueError("Неверный padding.")
+    padding = padded_binary_text[-padding_len_bytes * 8:]
+    expected_padding = last_byte * padding_len_bytes
+    if padding != expected_padding:
+        raise ValueError("Неверный padding.")
+    return padded_binary_text[:-padding_len_bytes * 8]
+
 ##########################################################################################################
 # 
 # # Функция для режима OFB
@@ -1254,7 +1297,7 @@ def perform_ofb_encryption():
             key_data = key_lines[1].strip().split(": ")[1]
 
         # Считывание текста
-        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        text_filename = os.path.join(project_files_folder, "lab6_text_data_56.txt")
         with open(text_filename, 'r') as file:
             text_lines = file.readlines()
             text_format = text_lines[0].strip().split(": ")[1]
@@ -1296,42 +1339,49 @@ def convert_to_binary(data, data_format):
 
 def des_ofb_encryption(binary_text, iv, key):
     """
-    Выполняет шифрование текста методом OFB с использованием DES.
+    Выполняет шифрование с использованием режима OFB и DES, реализуя синхронизацию по j битам.
 
     :param binary_text: Текст в бинарном формате (строка из 0 и 1).
     :param iv: Вектор инициализации в бинарном формате (64 бита).
     :param key: Ключ в бинарном формате (56 бит).
     :return: Зашифрованный текст в бинарном формате.
     """
+    j = 56  # Количество бит для синхронизации
+
     # Проверка входных данных
     if len(iv) != 64:
         raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
     if len(key) != 56:
         raise ValueError("Ключ должен быть длиной 56 бит.")
-    if len(binary_text) % 64 != 0:
-        raise ValueError("Текст должен быть кратен 64 битам.")
+    if len(binary_text) % j != 0:
+        raise ValueError(f"Текст должен быть кратен {j} битам.")
 
     # Добавляем биты четности к ключу
     extended_key = coding.add_parity_bits(key)
 
-    # Разделение текста на блоки по 64 бита
-    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    # Разделение текста на блоки по j бит
+    blocks = [binary_text[i:i + j] for i in range(0, len(binary_text), j)]
 
-    # Шифрование методом OFB
+    # Шифрование методом OFB с синхронизацией по j битам
     cipher_text = ""
-    current_iv = iv
-    for block in blocks:
-        # Генерация псевдослучайного блока (шифрование текущего IV)
-        encrypted_iv = coding.encrypt(current_iv, extended_key)
+    current_sr = iv  # Сдвиговый регистр, инициализированный IV
 
-        # Шифрование блока текста (XOR с псевдослучайным блоком)
+    for block in blocks:
+        # Шифрование текущего сдвигового регистра
+        encrypted_sr = coding.encrypt(current_sr, extended_key)
+
+        # Извлечение левых j бит для создания ключевого потока
+        keystream = encrypted_sr[:j]
+
+        # Шифрование блока путем XOR с ключевым потоком
         encrypted_block = ''.join(
-            '1' if bit_text != bit_iv else '0'
-            for bit_text, bit_iv in zip(block, encrypted_iv)
+            '1' if bit_text != bit_keystream else '0'
+            for bit_text, bit_keystream in zip(block, keystream)
         )
         cipher_text += encrypted_block
-        # Обновление IV для следующего блока
-        current_iv = encrypted_iv
+
+        # Обновление сдвигового регистра: сдвиг влево на j бит и добавление нового ключевого потока
+        current_sr = current_sr[j:] + keystream
 
     # Сохранение результата в файл
     save_encrypted_data_OFB(cipher_text, extended_key)
@@ -1339,43 +1389,42 @@ def des_ofb_encryption(binary_text, iv, key):
     return cipher_text
 
 def des_ofb_encryption_no_save(binary_text, iv, key):
-    """
-    Выполняет шифрование текста методом OFB с использованием DES.
+    j = 56  # Количество бит для синхронизации
 
-    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
-    :param iv: Вектор инициализации в бинарном формате (64 бита).
-    :param key: Ключ в бинарном формате (56 бит).
-    :return: Зашифрованный текст в бинарном формате.
-    """
     # Проверка входных данных
     if len(iv) != 64:
         raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
     if len(key) != 56:
         raise ValueError("Ключ должен быть длиной 56 бит.")
-    if len(binary_text) % 64 != 0:
-        raise ValueError("Текст должен быть кратен 64 битам.")
+    if len(binary_text) % j != 0:
+        raise ValueError(f"Текст должен быть кратен {j} битам.")
 
     # Добавляем биты четности к ключу
     extended_key = coding.add_parity_bits(key)
 
-    # Разделение текста на блоки по 64 бита
-    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    # Разделение текста на блоки по j бит
+    blocks = [binary_text[i:i + j] for i in range(0, len(binary_text), j)]
 
-    # Шифрование методом OFB
+    # Шифрование методом OFB с синхронизацией по j битам
     cipher_text = ""
-    current_iv = iv
-    for block in blocks:
-        # Генерация псевдослучайного блока (шифрование текущего IV)
-        encrypted_iv = coding.encrypt(current_iv, extended_key)
+    current_sr = iv  # Сдвиговый регистр, инициализированный IV
 
-        # Шифрование блока текста (XOR с псевдослучайным блоком)
+    for block in blocks:
+        # Шифрование текущего сдвигового регистра
+        encrypted_sr = coding.encrypt(current_sr, extended_key)
+
+        # Извлечение левых j бит для создания ключевого потока
+        keystream = encrypted_sr[:j]
+
+        # Шифрование блока путем XOR с ключевым потоком
         encrypted_block = ''.join(
-            '1' if bit_text != bit_iv else '0'
-            for bit_text, bit_iv in zip(block, encrypted_iv)
+            '1' if bit_text != bit_keystream else '0'
+            for bit_text, bit_keystream in zip(block, keystream)
         )
         cipher_text += encrypted_block
-        # Обновление IV для следующего блока
-        current_iv = encrypted_iv
+
+        # Обновление сдвигового регистра: сдвиг влево на j бит и добавление нового ключевого потока
+        current_sr = current_sr[j:] + keystream
 
     return cipher_text
 
@@ -1467,7 +1516,7 @@ def perform_ofb_decryption():
         decrypted_binary = des_ofb_encryption_no_save(cipher_binary, iv_binary, key_binary)
 
         # Убираем padding и преобразуем данные в разные представления
-        decrypted_binary_no_padding = remove_padding(decrypted_binary)
+        decrypted_binary_no_padding = unpad_from_56_bits(decrypted_binary)
         decrypted_text = binary_to_text(decrypted_binary_no_padding)
         decrypted_hex = binary_to_hex(decrypted_binary_no_padding)
 
@@ -1625,7 +1674,7 @@ def analyze_ofb_avalanche():
     text_format.pack(pady=5)
     text_format.current(0)  # По умолчанию обычный текст
     text_entry = ttk.Entry(root, width=100)
-    text_entry.insert(0, "REPUBLREPUBLIREPUBLICCIC")  # Пресетное значение
+    text_entry.insert(0, "REPURREPUBLIEPUBLIBLI")  # Пресетное значение
     text_entry.pack(pady=5)
 
     # Поле ввода для вектора инициализации
@@ -1669,7 +1718,7 @@ def xor(bin_str1, bin_str2):
     
     return ''.join(str(int(b1) ^ int(b2)) for b1, b2 in zip(bin_str1, bin_str2))
 
-def split_to_blocks(binary_string, block_size=64, block_count=3):
+def split_to_blocks(binary_string, block_size=56, block_count=3):
     # Вычисляем общую длину строки, необходимую для блоков
     total_length = block_size * block_count
     # Разделяем строку на блоки
@@ -1715,10 +1764,11 @@ def ofb_analyze_text_bit_change(text, key, iv):
     key = hex_to_binary(key)
     text = text_to_binary(text)
     iv = hex_to_binary(iv)
+    print(len(text))
     cipher = des_ofb_encryption_no_save(text, iv, key)
     cipher_S = split_to_blocks(cipher)
 
-    for i in range (64*3):
+    for i in range (56*3):
         new_text = flip_bit(text, i)
         new_cipher = des_ofb_encryption_no_save(new_text, iv, key)
         temp = split_to_blocks(new_cipher)
@@ -1730,7 +1780,7 @@ def ofb_analyze_text_bit_change(text, key, iv):
     S2_count = []
     S3_count = []
 
-    for i in range (64*3):
+    for i in range (56*3):
         change_S1 = xor(cipher_S[0], S1[i])
         change_S2 = xor(cipher_S[1], S2[i])
         change_S3 = xor(cipher_S[2], S3[i])
@@ -1812,7 +1862,7 @@ def ofb_analyze_cipher_bit_change(text, key, iv):
     P2 = []
     P3 = []
     
-    for i in range (64*3):
+    for i in range (56*3):
         new_cipher = flip_bit(cipher, i)
         new_plain = des_ofb_encryption_no_save(new_cipher, iv, key)
         temp = split_to_blocks(new_plain)
@@ -1824,7 +1874,7 @@ def ofb_analyze_cipher_bit_change(text, key, iv):
     P2_count = []
     P3_count = []
 
-    for i in range (64*3):
+    for i in range (56*3):
         change_P1 = xor(text_P[0], P1[i])
         change_P2 = xor(text_P[1], P2[i])
         change_P3 = xor(text_P[2], P3[i])
@@ -2296,7 +2346,6 @@ def plot_single_graph(y, title="График изменения битов", x_l
     # Показ графика
     plt.show()
 
-
 ##########################################################################################################
 # 
 # # Функция для режима CFB
@@ -2346,7 +2395,7 @@ def perform_cfb_encryption():
             key_data = key_lines[1].strip().split(": ")[1]
 
         # Считывание текста
-        text_filename = os.path.join(project_files_folder, "lab6_text_data.txt")
+        text_filename = os.path.join(project_files_folder, "lab6_text_data_56.txt")
         with open(text_filename, 'r') as file:
             text_lines = file.readlines()
             text_format = text_lines[0].strip().split(": ")[1]
@@ -2372,89 +2421,97 @@ def perform_cfb_encryption():
 
 def des_cfb_encryption(binary_text, iv, key):
     """
-    Выполняет шифрование текста методом СFB с использованием DES.
+    Выполняет шифрование текста методом CFB с использованием DES, реализуя синхронизацию по j битам.
 
     :param binary_text: Текст в бинарном формате (строка из 0 и 1).
     :param iv: Вектор инициализации в бинарном формате (64 бита).
     :param key: Ключ в бинарном формате (56 бит).
     :return: Зашифрованный текст в бинарном формате.
     """
+    j = 56  # Количество бит для синхронизации
+
     # Проверка входных данных
     if len(iv) != 64:
         raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
     if len(key) != 56:
         raise ValueError("Ключ должен быть длиной 56 бит.")
-    if len(binary_text) % 64 != 0:
-        raise ValueError("Текст должен быть кратен 64 битам.")
+    if len(binary_text) % j != 0:
+        raise ValueError(f"Текст должен быть кратен {j} битам.")
 
     # Добавляем биты четности к ключу
     extended_key = coding.add_parity_bits(key)
 
-    # Разделение текста на блоки по 64 бита
-    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    # Разделение текста на блоки по j бит
+    blocks = [binary_text[i:i + j] for i in range(0, len(binary_text), j)]
 
-    # Шифрование методом OFB
+    # Шифрование методом CFB с синхронизацией по j битам
     cipher_text = ""
-    current_iv = iv
+    current_sr = iv  # Сдвиговый регистр, инициализированный IV
+
     for block in blocks:
-        # Генерация псевдослучайного блока (шифрование текущего IV)
-        encrypted_iv = coding.encrypt(current_iv, extended_key)
+        # Шифрование текущего сдвигового регистра
+        encrypted_sr = coding.encrypt(current_sr, extended_key)
 
-        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        # Извлечение левых j бит зашифрованного сдвигового регистра для создания ключевого потока
+        keystream = encrypted_sr[:j]
+
+        # Шифрование блока путем XOR открытого текста и ключевого потока
         encrypted_block = ''.join(
-            '1' if bit_text != bit_iv else '0'
-            for bit_text, bit_iv in zip(block, encrypted_iv)
+            '1' if bit_text != bit_keystream else '0'
+            for bit_text, bit_keystream in zip(block, keystream)
         )
-        # Обновление IV для следующего блока
-        current_iv = encrypted_block
 
+        # Добавление зашифрованного блока к результату
         cipher_text += encrypted_block
 
+        # Обновление сдвигового регистра: сдвиг влево на j бит и добавление зашифрованного блока
+        current_sr = current_sr[j:] + encrypted_block
 
     # Сохранение результата в файл
     save_encrypted_data_cfb(cipher_text, extended_key)
 
     return cipher_text
 
-def des_сfb_encryption_no_save(binary_text, iv, key):
-    """
-    Выполняет шифрование текста методом OFB с использованием DES.
 
-    :param binary_text: Текст в бинарном формате (строка из 0 и 1).
-    :param iv: Вектор инициализации в бинарном формате (64 бита).
-    :param key: Ключ в бинарном формате (56 бит).
-    :return: Зашифрованный текст в бинарном формате.
-    """
+def des_сfb_encryption_no_save(binary_text, iv, key):
+    j = 56  # Количество бит для синхронизации
+
     # Проверка входных данных
     if len(iv) != 64:
         raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
     if len(key) != 56:
         raise ValueError("Ключ должен быть длиной 56 бит.")
-    if len(binary_text) % 64 != 0:
-        raise ValueError("Текст должен быть кратен 64 битам.")
+    if len(binary_text) % j != 0:
+        raise ValueError(f"Текст должен быть кратен {j} битам.")
 
     # Добавляем биты четности к ключу
     extended_key = coding.add_parity_bits(key)
 
-    # Разделение текста на блоки по 64 бита
-    blocks = [binary_text[i:i + 64] for i in range(0, len(binary_text), 64)]
+    # Разделение текста на блоки по j бит
+    blocks = [binary_text[i:i + j] for i in range(0, len(binary_text), j)]
 
-    # Шифрование методом OFB
+    # Шифрование методом CFB с синхронизацией по j битам
     cipher_text = ""
-    current_iv = iv
+    current_sr = iv  # Сдвиговый регистр, инициализированный IV
+
     for block in blocks:
-        # Генерация псевдослучайного блока (шифрование текущего IV)
-        encrypted_iv = coding.encrypt(current_iv, extended_key)
+        # Шифрование текущего сдвигового регистра
+        encrypted_sr = coding.encrypt(current_sr, extended_key)
 
-        # Шифрование блока текста (XOR с псевдослучайным блоком)
+        # Извлечение левых j бит зашифрованного сдвигового регистра для создания ключевого потока
+        keystream = encrypted_sr[:j]
+
+        # Шифрование блока путем XOR открытого текста и ключевого потока
         encrypted_block = ''.join(
-            '1' if bit_text != bit_iv else '0'
-            for bit_text, bit_iv in zip(block, encrypted_iv)
+            '1' if bit_text != bit_keystream else '0'
+            for bit_text, bit_keystream in zip(block, keystream)
         )
-        # Обновление IV для следующего блока
-        current_iv = encrypted_block
 
+        # Добавление зашифрованного блока к результату
         cipher_text += encrypted_block
+
+        # Обновление сдвигового регистра: сдвиг влево на j бит и добавление зашифрованного блока
+        current_sr = current_sr[j:] + encrypted_block
 
     return cipher_text
 
@@ -2496,40 +2553,54 @@ def save_encrypted_data_cfb(cipher_text, extended_key):
 
 def des_cfb_decryption(cipher_text, iv, key):
     """
-    Выполняет дешифровку текста методом CFB с использованием DES.
+    Выполняет дешифрование текста методом CFB с использованием DES, реализуя синхронизацию по j битам.
     
-    :param cipher_text: Зашифрованный текст в бинарном формате.
+    :param cipher_text: Зашифрованный текст в бинарном формате (строка из 0 и 1).
     :param iv: Вектор инициализации в бинарном формате (64 бита).
     :param key: Ключ в бинарном формате (56 бит).
     :return: Расшифрованный текст в бинарном формате.
     """
-    # Проверка входных данных аналогична функции шифрования
+    j = 56  # Количество бит для синхронизации
+
+    # Проверка входных данных
+    if len(iv) != 64:
+        raise ValueError("Вектор инициализации должен быть длиной 64 бита.")
+    if len(key) != 56:
+        raise ValueError("Ключ должен быть длиной 56 бит.")
+    if len(cipher_text) % j != 0:
+        raise ValueError(f"Зашифрованный текст должен быть кратен {j} битам.")
 
     # Добавляем биты четности к ключу
     extended_key = coding.add_parity_bits(key)
-    
-    # Разделение текста на блоки по 64 бита
-    blocks = [cipher_text[i:i + 64] for i in range(0, len(cipher_text), 64)]
-    
-    # Дешифровка методом CFB
+
+    # Разделение зашифрованного текста на блоки по j бит
+    blocks = [cipher_text[i:i + j] for i in range(0, len(cipher_text), j)]
+
+    # Дешифрование методом CFB с синхронизацией по j битам
     decrypted_text = ""
-    current_iv = iv
+    current_sr = iv  # Сдвиговый регистр, инициализированный IV
+
     for block in blocks:
-        # Шифрование текущего IV
-        encrypted_iv = coding.encrypt(current_iv, extended_key)
-        
-        # Расшифровка блока (XOR зашифрованного IV с текущим блоком шифротекста)
+        # Шифрование текущего сдвигового регистра
+        encrypted_sr = coding.encrypt(current_sr, extended_key)
+
+        # Извлечение левых j бит для создания ключевого потока
+        keystream = encrypted_sr[:j]
+
+        # Дешифрование блока путем XOR зашифрованного блока и ключевого потока
         decrypted_block = ''.join(
-            '1' if bit_cipher != bit_enc_iv else '0'
-            for bit_cipher, bit_enc_iv in zip(block, encrypted_iv)
+            '1' if bit_cipher != bit_keystream else '0'
+            for bit_cipher, bit_keystream in zip(block, keystream)
         )
-        
-        # Обновление IV для следующего блока (текущий шифротекст)
-        current_iv = block
-        
+
+        # Добавление расшифрованного блока к результату
         decrypted_text += decrypted_block
-    
+
+        # Обновление сдвигового регистра: сдвиг влево на j бит и добавление текущего зашифрованного блока
+        current_sr = current_sr[j:] + block
+
     return decrypted_text
+
 
 def perform_cfb_decryption():
     """
@@ -2640,7 +2711,7 @@ def analyze_cfb_avalanche():
     text_format.pack(pady=5)
     text_format.current(0)  # По умолчанию обычный текст
     text_entry = ttk.Entry(root, width=100)
-    text_entry.insert(0, "REPUBLREPUBLIREPUBLICCIC")  # Пресетное значение
+    text_entry.insert(0, "REPURREPUBLIEPUBLIBLI")  # Пресетное значение
     text_entry.pack(pady=5)
 
     # Поле ввода для вектора инициализации
@@ -2665,10 +2736,10 @@ def analyze_cfb_avalanche():
     key = key_entry.get()
     iv = iv_entry.get()
 
-    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: ofb_analyze_text_bit_change(text, key, iv)).pack(padx=5)
-    ttk.Button(root, text="Изменить 1 бит в ключе", style="TButton", command=lambda: ofb_analyze_key_bit_change(text, key, iv)).pack(padx=5)
-    ttk.Button(root, text="Изменить 1 бит в векторе", style="TButton", command=lambda: ofb_analyze_iv_bit_change(text, key, iv)).pack(padx=5)
-    ttk.Button(root, text="Изменить 1 бит в шифртексте", style="TButton", command=lambda: ofb_analyze_cipher_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в тексте", style="TButton", command=lambda: cfb_analyze_text_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в ключе", style="TButton", command=lambda: сfb_analyze_key_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в векторе", style="TButton", command=lambda: сfb_analyze_iv_bit_change(text, key, iv)).pack(padx=5)
+    ttk.Button(root, text="Изменить 1 бит в шифртексте", style="TButton", command=lambda: сfb_analyze_cipher_bit_change(text, key, iv)).pack(padx=5)
     # Кнопка назад
     ttk.Button(root, text="Назад", style="TButton", command=show_lab6_menu).pack(pady=10)
 
@@ -2682,7 +2753,7 @@ def cfb_analyze_text_bit_change(text, key, iv):
     cipher = des_сfb_encryption_no_save(text, iv, key)
     cipher_S = split_to_blocks(cipher)
 
-    for i in range (64*3):
+    for i in range (56*3):
         new_text = flip_bit(text, i)
         new_cipher = des_сfb_encryption_no_save(new_text, iv, key)
         temp = split_to_blocks(new_cipher)
@@ -2694,7 +2765,7 @@ def cfb_analyze_text_bit_change(text, key, iv):
     S2_count = []
     S3_count = []
 
-    for i in range (64*3):
+    for i in range (56*3):
         change_S1 = xor(cipher_S[0], S1[i])
         change_S2 = xor(cipher_S[1], S2[i])
         change_S3 = xor(cipher_S[2], S3[i])
@@ -2703,7 +2774,7 @@ def cfb_analyze_text_bit_change(text, key, iv):
         S3_count.append(change_S3.count('1'))
     plot_three_graphs(S1_count, S2_count, S3_count)
      
-def ofb_analyze_key_bit_change(text, key, iv):
+def сfb_analyze_key_bit_change(text, key, iv):
     S1 = []
     S2 = []
     S3 = []
@@ -2734,7 +2805,7 @@ def ofb_analyze_key_bit_change(text, key, iv):
         S3_count.append(change_S3.count('1'))
     plot_three_graphs(S1_count, S2_count, S3_count)    
 
-def ofb_analyze_iv_bit_change(text, key, iv):
+def сfb_analyze_iv_bit_change(text, key, iv):
     S1 = []
     S2 = []
     S3 = []
@@ -2756,7 +2827,7 @@ def ofb_analyze_iv_bit_change(text, key, iv):
     S2_count = []
     S3_count = []
 
-    for i in range (64):
+    for i in range (56):
         change_S1 = xor(cipher_S[0], S1[i])
         change_S2 = xor(cipher_S[1], S2[i])
         change_S3 = xor(cipher_S[2], S3[i])
@@ -2765,7 +2836,7 @@ def ofb_analyze_iv_bit_change(text, key, iv):
         S3_count.append(change_S3.count('1'))
     plot_three_graphs(S1_count, S2_count, S3_count)  
 
-def ofb_analyze_cipher_bit_change(text, key, iv):
+def сfb_analyze_cipher_bit_change(text, key, iv):
     key = hex_to_binary(key)
     text = text_to_binary(text)
     iv = hex_to_binary(iv)
@@ -2776,7 +2847,7 @@ def ofb_analyze_cipher_bit_change(text, key, iv):
     P2 = []
     P3 = []
     
-    for i in range (64*3):
+    for i in range (56*3):
         new_cipher = flip_bit(cipher, i)
         new_plain = des_cfb_decryption(new_cipher, iv, key)
         temp = split_to_blocks(new_plain)
@@ -2788,7 +2859,7 @@ def ofb_analyze_cipher_bit_change(text, key, iv):
     P2_count = []
     P3_count = []
 
-    for i in range (64*3):
+    for i in range (56*3):
         change_P1 = xor(text_P[0], P1[i])
         change_P2 = xor(text_P[1], P2[i])
         change_P3 = xor(text_P[2], P3[i])
